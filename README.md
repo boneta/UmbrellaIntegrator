@@ -1,7 +1,7 @@
 # Umbrella Integrator
 *Umbrella Integration of PMF calculations - 1D & 2D*
 
-#### Version:  0.1 - 16/05/2020
+#### Version:  0.2 - 18/05/2020
 
 ### Usage
 ```
@@ -19,8 +19,8 @@ Python3 recommended \
 Supported: Python 2.7 and Python 3.7
 
 Packages:
-  - NumPy - Trapezoidal integration
-  - SciPy - Simpson's rule integration and 2D integration
+  - NumPy
+  - SciPy - 2D Real Space Grid integration
 
 ### Input format
 

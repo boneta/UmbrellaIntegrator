@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 '''
@@ -58,7 +58,6 @@ import numpy as np
 
 # scipy
 try:
-    from scipy.integrate import simps
     import scipy.optimize as optimize
     _scipy = True
 except ImportError:
@@ -105,7 +104,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  0.1 - 16052020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  0.2 - 18052020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
                         metavar='XD',
@@ -141,13 +140,15 @@ def __parserbuilder():
                         '--int',
                         metavar='INT',
                         type=str,
-                        choices=['trapz','simpson','real'],
+                        choices=['trapz','simpson','mini','trapz+mini'],
                         help='integration method for the derivates\n'+
                              ' 1D\n'+
-                             "   'trapz'   - composite trapezoidal rule\n"+
-                             "   'simpson' - Simpson's rule (def)\n"+
+                             "   'trapz'      - composite trapezoidal rule (def)\n"+
+                             "   'simpson'    - Simpson's rule\n"+
                              ' 2D\n'+
-                             "   'real'    - real space grid (def)")
+                             "   'mini'        - real space grid minimization\n"+
+                             "   'trapz+mini'  - trapezoidal integration as initial guess \n"
+                             "                  for real space grid minimization (def)")
     parser.add_argument('-b',
                         '--bins',
                         type=int,
@@ -216,7 +217,6 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0):
     a_N     = np.zeros((n_i), dtype=int)                               # number of samples
     
     # read 'dat_*' files
-    dat_all = []
     for i in range(n_i):
         # set file and open/read
         fx = coor1[i]
@@ -229,15 +229,12 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0):
         a_mean[i] = np.mean(datx)
         a_std[i]  = np.std(datx)
         a_N[i] = len(datx)
-        # accumulate data
-        dat_all.extend(datx)
         # print progress
         sys.stdout.write("{:s}  -  {:d}\n".format(fx, a_N[i]))
 
     # build data matrix and get limits
-    dat_all = np.asarray(dat_all)
     limits = np.zeros((2), dtype=float)
-    limits = np.min(dat_all), np.max(dat_all)
+    limits = np.min(a_mean), np.max(a_mean)
 
     # correct force constant
     # a_fc = a_fc * 0.5
@@ -294,6 +291,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y', equilibration=0):
     coor1 = [ i for i in files if name1 in i ]
     coor2 = [ i for i in files if name2 in i ]
     if len(coor1) == 0 or len(coor2) == 0: raise NameError('No {}.*/{}.* files found on the specified path'.format(name1,name2))
+    if len(coor1) != len(coor2): raise NameError('Different number of {}.* and {}.* files'.format(name1,name2))
     coor1.sort()
     coor2.sort()
 
@@ -312,7 +310,6 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y', equilibration=0):
     m_N     = np.zeros((n_j, n_i), dtype=int)                          # number of samples (2D matrix)
     
     # read 'dat_*' files
-    all_x, all_y = [], []
     line0 = np.zeros((2,2), dtype=float)
     for fx, fy in zip(coor1, coor2):
         # set i,j and open/read files
@@ -332,18 +329,13 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y', equilibration=0):
         m_mean[j,i,:] = np.mean(datx), np.mean(daty)
         m_covar[j,i] = np.cov(datx, daty)
         m_N[j,i] = len(datx)
-        # accumulate data
-        all_x.extend(datx)
-        all_y.extend(daty)
         # print progress
         sys.stdout.write("{:s}  {:s}  -  {:d}\n".format(fx, fy, m_N[j,i]))
 
-    # build data matrix and get limits
-    dat_all = np.stack((all_x, all_y))
-    del all_x, all_y
+    # get limits
     limits = np.zeros((2,2), dtype=float)
-    limits[0] = np.min(dat_all[0]), np.max(dat_all[0])
-    limits[1] = np.min(dat_all[1]), np.max(dat_all[1])
+    limits[0] = np.min(m_mean[:,:,0]), np.max(m_mean[:,:,0])
+    limits[1] = np.min(m_mean[:,:,1]), np.max(m_mean[:,:,1])
 
     # correct force constant
     # m_fc = m_fc * 0.5
@@ -358,6 +350,102 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y', equilibration=0):
 
     # return results
     return n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits
+
+##  Read 2D Data - Line ###############################################
+def read_dynamo_2D_line(directory, name1='dat_x', name2='dat_y', equilibration=0):
+    '''Read 2D data from fDynamo files into arrays
+    
+        Parameters
+        ----------
+        directory : str
+            path to the files
+        name1 : str
+            prefix of x files (def: 'dat_x')
+        name2 : str
+            prefix of y files (def: 'dat_y')
+        equilibration : int
+            number of steps considered equilibration and excluded (def: 0)
+        
+        Returns
+        -------
+        n_i : int
+            number of total windows simulated
+        a_fc : ndarray(n_i,2,2)
+            array of force constants matrices
+        a_rc0 : ndarray(n_i,2)
+            array of reference coordinates
+        a_mean : ndarray(n_i,2)
+            array of mean coordinates
+        a_covar : ndarray(n_i,2,2)
+            array of covariance matrices of coordinates
+        a_N : ndarray(n_i,2)
+            array of number of samples for each window
+        limits : ndarray(2,2)
+            array of minimum and maximum coordinates
+    '''
+    
+    sys.stdout.write("# Reading input files\n")
+
+
+    # get 'dat_*' file lists
+    files = os.listdir(directory)
+    coor1 = [ i for i in files if name1 in i ]
+    coor2 = [ i for i in files if name2 in i ]
+    if len(coor1) == 0 or len(coor2) == 0: raise NameError('No {}.*/{}.* files found on the specified path'.format(name1,name2))
+    if len(coor1) != len(coor2): raise NameError('Different number of {}.* and {}.* files'.format(name1,name2))
+    coor1.sort()
+    coor2.sort()
+
+    # number of total windows
+    n_i = len(coor1)
+
+    # initialize arrays
+    a_rc0   = np.zeros((n_i, 2), dtype=float)                          # initial distance set
+    a_mean  = np.zeros_like(a_rc0)                                     # mean of distance
+
+    a_fc    = np.zeros((n_i, 2, 2), dtype=float)                       # force constants matrices (2,2)
+    a_covar = np.zeros_like(a_fc)                                      # covariance of distance matrices (2,2)
+
+    a_N     = np.zeros((n_i), dtype=int)                               # number of samples
+    
+    # read 'dat_*' files
+    line0 = np.zeros((2,2), dtype=float)
+    for fx, fy, i in zip(coor1, coor2, range(n_i)):
+        # open/read files
+        datx = open(os.path.join(directory, fx)).readlines()
+        daty = open(os.path.join(directory, fy)).readlines()
+        # force matrix and initial distance from line0
+        line0[0], line0[1] = datx.pop(0).split(), daty.pop(0).split()
+        a_fc[i] = np.diagflat(line0[:,0])
+        a_rc0[i] = line0[:,1]
+        # convert to numpy, ignoring equilibration part and truncating to the shorter
+        shorter = min(len(datx), len(daty))
+        datx = np.asarray(datx[equilibration:shorter], dtype=float)
+        daty = np.asarray(daty[equilibration:shorter], dtype=float) 
+        # mean, covariance and number of samples
+        a_mean[i,:] = np.mean(datx), np.mean(daty)
+        a_covar[i] = np.cov(datx, daty)
+        a_N[i] = len(datx)
+        # print progress
+        sys.stdout.write("{:s}  {:s}  -  {:d}\n".format(fx, fy, a_N[i]))
+
+    # get limits
+    limits = np.zeros((2,2), dtype=float)
+    limits[0] = np.min(a_mean[:,0]), np.max(a_mean[:,0])
+    limits[1] = np.min(a_mean[:,1]), np.max(a_mean[:,1])
+
+    # correct force constant
+    # a_fc = a_fc * 0.5
+
+    # print information
+    sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i))
+    sys.stdout.write("# Average samples:  {:<10.2f}\n".format(np.mean(a_N)))
+    sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n'
+                        '# y_min: {:>7.3f}    y_max: {:>7.3f} \n\n'.format(limits[0,0],limits[0,1],limits[1,0],limits[1,1]))
+    sys.stdout.flush()
+
+    # return results
+    return n_i, a_fc, a_rc0, a_mean, a_covar, a_N, limits
 
 ##  Umbrella Integration 1D  ##########################################
 def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits, temp=298., integrator='trapz'):
@@ -396,18 +484,17 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits
             array of integrated free energy
     '''
 
-    # correct number of bins before integral triming
-    n_bins_o = n_bins
-    if integrator == 'trapz': n_bins = n_bins + 1
-    elif integrator == 'simpson': n_bins = n_bins + 2
-    else: raise ValueError('Integrator not recognized')
-    
+    # check integrator specification
+    if integrator not in {'trapz', 'simpson'}: 
+        raise ValueError('Integrator not recognized')
+
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
     beta = 1./(kB*temp)
     tau_sqrt = np.sqrt(2.*np.pi)
     m_var = a_std ** 2
     bins = np.linspace(limits[0],limits[1],n_bins)
+    db = abs(bins[0] - bins[1])                         # space between bins
     dA_bins = np.zeros_like(bins)
     A_bins = np.zeros_like(bins)
 
@@ -425,31 +512,30 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits
     def normal_tot(rc):
         return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
 
-    sys.stdout.write("# Calculating derivates - {} bins \n".format(n_bins_o))
-
     # calculate derivates of free energy over the bins [Kästner 2005 - Eq.7]
-    for j in range(n_bins):
-        rc = bins[j]
+    sys.stdout.write("# Calculating derivates - {} bins \n".format(n_bins))
+    for b in range(n_bins):
+        rc = bins[b]
         normal = normal_tot(rc)
-        dA_bins[j] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
+        dA_bins[b] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
 
 
     ## Integration ----------------------------------------------------
-    # TODO: Non acumulative 1D integrals -> More efficiency
 
-    # composite trapezoidal rule integration
+    ## composite trapezoidal rule integration [scipy.integrate.cumtrapz]
     if integrator == 'trapz':
         sys.stdout.write("# Integrating           - Trapezoidal \n\n")
-        for j in range(n_bins-1):
-            A_bins[j] = np.trapz(dA_bins[:j+1], bins[:j+1])
-        bins, A_bins = bins[:-1], A_bins[:-1]
-    
-    # Simpson's rule integration
+        stp = db/2.
+        for b in range(1, n_bins):
+            A_bins[b] = A_bins[b-1] + stp * (dA_bins[b-1] + dA_bins[b])
+
+    ## Simpson's rule integration
     elif integrator == 'simpson':
         sys.stdout.write("# Integrating           - Simpson's rule \n\n")
-        for j in range(n_bins-2):
-            A_bins[j] = simps(dA_bins[:j+2], bins[:j+2], even='avg')
-        bins, A_bins = bins[:-2], A_bins[:-2]
+        stp = db/6.
+        for b in range(1,n_bins-1):
+            A_bins[b] = A_bins[b-1] + stp * (dA_bins[b-1] + 4*dA_bins[b] + dA_bins[b+1])
+        A_bins[-1] = A_bins[-2] + db/2. * (dA_bins[-2] + dA_bins[-1])   # last point trapezoidal
 
 
     # set minimum to zero
@@ -459,7 +545,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits
     return bins, dA_bins, A_bins
 
 ##  Umbrella Integration 2D  ##########################################
-def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=298., integrator='real'):
+def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=298., integrator='trapz+mini'):
     '''Umbrella Integration algorithm for 2D
     
         Parameters
@@ -485,8 +571,8 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N,
             matrix of minimum and maximum coordinates
         temp : int, optional
             temperature (K) (def: 298.)
-        integrator : {'real'}, optional
-            integration algorithm (def: 'real')
+        integrator : {'mini','trapz+mini'}, optional
+            integration algorithm (def: 'trapz+mini')
 
         Returns
         -------
@@ -498,6 +584,10 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N,
             matrix of integrated free energy
     '''
 
+    # check integrator specification
+    if integrator not in {'mini', 'trapz+mini'}: 
+        raise ValueError('Integrator not recognized')
+
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
     beta = 1./(kB*temp)
@@ -506,22 +596,24 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N,
     m_det_sqrt = np.sqrt(np.linalg.det(m_covar[:,:]))     # sqrt of determinants of covar matrix
 
     ## Grid -----------------------------------------------------------
+
     # grid dimensions
-    n_i_g = int(np.ceil(grid_f*n_i))
-    n_j_g = int(np.ceil(grid_f*n_j))
-    n_grid = n_j_g * n_i_g
+    n_ig = int(np.ceil(grid_f*n_i))
+    n_jg = int(np.ceil(grid_f*n_j))
+    n_grid = n_jg * n_ig
     # sides
-    grid_x = np.linspace(limits[0,0],limits[0,1],n_i_g)
-    grid_y = np.linspace(limits[1,0],limits[1,1],n_j_g)
+    grid_x = np.linspace(limits[0,0],limits[0,1],n_ig)
+    grid_y = np.linspace(limits[1,0],limits[1,1],n_jg)
     dx, dy = abs(grid_x[0] - grid_x[1]), abs(grid_y[0] - grid_y[1])    # space between points
     # grid building
-    grid = np.zeros((n_j_g,n_i_g,2))
-    for j in range(n_j_g):
-        for i in range(n_i_g):
+    grid = np.zeros((n_jg,n_ig,2))
+    for j in range(n_jg):
+        for i in range(n_ig):
             grid[j,i] = grid_x[i], grid_y[j]
     # initialize results matrix
     dA_grid = np.zeros_like(grid)
-    A_grid = np.random.rand(n_j_g,n_i_g)*10
+    A_grid  = np.zeros((n_jg,n_ig))
+    # A_grid = np.random.rand(n_jg,n_ig)*10
 
     ## Derivates ------------------------------------------------------
 
@@ -539,74 +631,95 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N,
         return np.sum([m_N[j,i]*probability(rc,j,i) for i in range(n_i) for j in range(n_j)])
 
     # # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
-    # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_j_g) for i in range(n_i_g)]).reshape(n_j_g,n_i_g)
+    # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_jg) for i in range(n_ig)]).reshape(n_jg,n_ig)
 
     # calculate gradient field of free energy over grid [Kästner 2009 - Eq.11]
-    sys.stdout.write("# Calculating derivates - Grid {} x {}\n".format(n_i_g,n_j_g))
-    for jg in range(n_j_g):
-        for ig in range(n_i_g):
+    sys.stdout.write("# Calculating derivates - Grid {} x {}\n".format(n_ig,n_jg))
+    for jg in range(n_jg):
+        for ig in range(n_ig):
             rc = grid[jg,ig]
             normal = normal_tot(rc)
             dA_grid[jg,ig] = np.sum(np.transpose([ m_N[j,i]*probability(rc,j,i)/normal * dA(rc,j,i) for i in range(n_i) for j in range(n_j) ]), axis=1)
         # progress bar
-        sys.stdout.write("\r# [{:19s}] - {:>6.2f}%".format( "■"*int(19.*(jg+1)/n_j_g), (jg+1)/n_j_g*100)); sys.stdout.flush()
+        sys.stdout.write("\r# [{:19s}] - {:>6.2f}%".format( "■"*int(19.*(jg+1)/n_jg), (jg+1)/n_jg*100)); sys.stdout.flush()
     sys.stdout.write("\n")
     sys.stdout.flush()
 
 
     ## Integration ----------------------------------------------------
     # TODO: Integration by expansion in a Fourier series
+ 
+    # difference of gradients per grid point [Kästner 2009 - Eq.14] (optimization format)
+    def D_tot(F):
+        F = F.reshape(n_jg,n_ig)
+        dFy, dFx = np.gradient(F,dy,dx)
+        dF = np.stack((dFx,dFy), axis=-1)
+        return np.sum((dA_grid - dF)**2) / n_grid
+
+    ## real-space grid minimization
     # TODO: Global optimization methods -> Differential Evolution
     # FIXME: Now minimization of the squared difference of gradients
     #        per grid point instead of the derivate of difference
     #        of gradients (it matters?)
- 
-    # real-space grid integration
-    if integrator == 'real':
-        sys.stdout.write("# Integrating           - Real Space Grid \n\n")
-
-        # derivate of gradient differences [Kästner 2009 - Eq.16]
-        # FIXME: Elements of two boundary levels are excluded
-        def dD(F,j,i):
-            if (j and i > 1) and (j < n_j_g-1 and i < n_i_g-1):
-                return (dA_grid[j,i-1,0] - dA_grid[j,i+1,0] + (-F[j,i-2]+2*F[j,i]-F[j,i-2])/(2*dx))/dx \
-                     + (dA_grid[j-1,i,1] - dA_grid[j+1,i,1] + (-F[j-2,i]+2*F[j,i]-F[j-2,i])/(2*dy))/dy
-            else:
-                return 0
-
-        # sumation of derivates of gradient differences (optimization format)
-        def dD_tot(F):
-            F = F.reshape(n_j_g,n_i_g)
-            return np.sum([ dD(F,j,i)**2 for i in range(2, n_i_g-2) for j in range(2, n_j_g-2) ])
-
-        # difference of gradients per grid point [Kästner 2009 - Eq.14] (optimization format)
-        # boundary elements are excluded. loop format --> gradient on the fly --> F*****g slow 
-        # def D_tot_core_loop(F):
-        #     F = F.reshape(n_j_g,n_i_g)
-        #     core = np.sum([ (dA_grid[j,i,0] - (F[j,i+1]-F[j,i-1])/(2*dx))**2 + (dA_grid[j,i,1] - (F[j+1,i]-F[j-1,i])/(2*dy))**2 for i in range(1, n_i_g-1) for j in range(1, n_j_g-1) ])
-        #     return core
-
-        # difference of gradients per grid point [Kästner 2009 - Eq.14] (optimization format)
-        # vectorized --> F*****g fast
-        def D_tot(F):
-            F = F.reshape(n_j_g,n_i_g)
-            dFy, dFx = np.gradient(F,dy,dx)
-            dF = np.stack((dFx,dFy), axis=-1)
-            return np.sum((dA_grid - dF)**2) / n_grid
-        
-        # difference of gradients per grid point (optimization format)
-        # boundary elements are excluded. vectorized
-        # def D_tot_core(F):
-        #     F = F.reshape(n_j_g,n_i_g)
-        #     dFy, dFx = np.gradient(F,dy,dx)
-        #     dF = np.stack((dFx,dFy), axis=-1)
-        #     return np.sum((dA_grid[1:-1,1:-1] - dF[1:-1,1:-1])**2) / n_grid
+    if integrator == 'mini':
+        sys.stdout.write("# Integrating           - Real Space Grid Mini \n\n")
 
         # L-BFGS-B minimization of sumation of square of gradient differences
         mini_result = optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
         if not mini_result.success:
             sys.stdout.write("WARNING: Minimization could not converge\n\n")
-        A_grid = mini_result.x.reshape(n_j_g,n_i_g)
+        A_grid = mini_result.x.reshape(n_jg,n_ig)
+
+    ## double composite trapezoidal rule integration + real-space grid minimization
+    elif integrator == 'trapz+mini':
+        sys.stdout.write("# Integrating           - Trapezoidal + Real Space Grid Mini\n")
+
+        # double trapezoidal from a corner
+        def trapz_corner(init, dir0):
+            A = np.zeros((n_jg,n_ig))
+            # parameter specification
+            if init == 'DownLeft':
+                i_range = list(range(1, n_ig))
+                j_range = list(range(1, n_jg))
+                fi, fj = -1, -1
+            elif init == 'UpLeft':
+                i_range = list(range(1, n_ig))
+                j_range = list(reversed(range(0, n_jg-1)))
+                fi, fj = -1, 1
+            elif init == 'DownRight':
+                i_range = list(reversed(range(0, n_ig-1)))
+                j_range = list(range(1, n_jg))
+                fi, fj = 1, -1
+            elif init == 'UpRight':
+                i_range = list(reversed(range(0, n_ig-1)))
+                j_range = list(reversed(range(0, n_jg-1)))
+                fi, fj = 1, 1
+            stp_x, stp_y = -1*fi*dx/2., -1*fj*dy/2.
+            # integration
+            if dir0 == 'x':
+                for i in i_range:
+                    A[0,i] = A[0,i+fi] + stp_x * (dA_grid[0,i+fi,0] + dA_grid[0,i,0])
+                for j in j_range:
+                    A[j,:] = A[j+fj,:] + stp_y * (dA_grid[j+fj,:,1] + dA_grid[j,:,1])
+            elif dir0 == 'y':
+                for j in j_range:
+                    A[j,0] = A[j+fj,0] + stp_y * (dA_grid[j+fj,0,1] + dA_grid[j,0,1])
+                for i in i_range:
+                    A[:,i] = A[:,i+fi] + stp_x * (dA_grid[:,i+fi,0] + dA_grid[:,i,0])
+            # relativized result
+            return A - np.min(A)
+
+        # calculate trapezoidal integrals from every corner and average -> inital guess
+        A_grid = ( trapz_corner('DownLeft', 'x')  + trapz_corner('DownLeft', 'y') +
+                   trapz_corner('UpLeft',   'x')  + trapz_corner('UpLeft',   'y') + 
+                   trapz_corner('DownRight','x')  + trapz_corner('DownRight','y') + 
+                   trapz_corner('UpRight',  'x')  + trapz_corner('UpRight',  'y') ) / 8
+
+        # L-BFGS-B minimization of sumation of square of gradient differences
+        mini_result = optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+        if not mini_result.success:
+            sys.stdout.write("WARNING: Minimization could not converge\n\n")
+        A_grid = mini_result.x.reshape(n_jg,n_ig)
 
     # set minimum to zero
     A_grid = A_grid - np.min(A_grid)
@@ -710,8 +823,10 @@ if __name__ == '__main__':
     n_bins       = args.bins
     grid_f       = args.grid
     if args.int is None:
-        if dimension == '1D': integrator = 'simpson'
-        elif dimension == '2D': integrator = 'real'
+        if dimension == '1D': integrator = 'trapz'
+        elif dimension == '2D': integrator = 'trapz+mini'
+    else:
+        integrator = args.int
 
     ##  GENERAL INFO  #################################################
     sys.stdout.write("## UMBRELLA INTEGRATION ##\n")
@@ -722,10 +837,6 @@ if __name__ == '__main__':
 
     ##  1D  ###########################################################
     if dimension == '1D':
-        ## check integrator
-        if integrator == 'simpson' and not _scipy: 
-            sys.stdout.write("WARNING: SciPy could not be imported. Integrator changed to 'trapz'.\n")
-            integrator = 'trapz'
         ## read input
         n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration)
         ## umbrella integration
@@ -737,8 +848,9 @@ if __name__ == '__main__':
     ##  2D  ###########################################################
     if dimension == '2D':
         ## check scipy
-        if not _scipy: 
+        if not _scipy:
             raise ImportError('SciPy could not be imported')
+            # sys.stdout.write("WARNING: SciPy could not be imported. Integrator changed to 'trapz'.\n")
         ## read input
         n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration)
         ## umbrella integration
