@@ -1,6 +1,6 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.4.1-brightgreen.svg)
+![GitHub version](https://img.shields.io/badge/version-0.5.0-brightgreen.svg)
 ![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2028--08--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
@@ -23,7 +23,7 @@ Packages:
   - NumPy
   - SciPy (optional for 1D)
 
-Extremely fast functions written in Fortran can be used for incomplete grid ('igrid') method in 2D. To take advantage of them, a f2py module must be compiled once:
+Extremely fast functions written in Fortran can be used for 2D methods. To take advantage of them, a f2py module must be compiled once:
 
 `python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran`
 
@@ -43,22 +43,22 @@ Only mandatory parameter is the dimension of the PMF: 1 or 2\
 Temperature (in Kelvin) and output units (kj/mol or kcal/mol) can be chosen. Default: 298.0K and kj/mol\
 Relative location of the input files is set with '--path'
 
-###### 1 Dimension
-The coordinate is split into equally spaced bins, local gradients are calculated on each according to umbrella integration equations and the whole trajectory is integrated. The number of bins to use is set with '--bins'. Default: 2000
+##### 1 Dimension
+The coordinate is split into equally spaced bins, local derivatives are calculated on each according to umbrella integration equations and the whole trajectory is integrated. The number of bins to use is set with '--bins'. Default: 2000
 
-###### 2 Dimension
+##### 2 Dimension
 Two working modes available:
 
  - *Rectangular grid* : Default mode. The PMF points are forced into a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--grid' parameter. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
 
- - *Incomplete grid* : Activated with '--igrid'. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local gradients are interpolated into a equally spaced grid with '--idist' distance between points. The surface is only integrated in areas with input values. It is the recommended method if not forced to a perfect rectangular result. It is faster, as it can take advantage of subroutines written in Fortran.
+ - *Incomplete grid* : Activated with '--igrid'. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into a equally spaced grid with '--idist' distance between points. The surface is only generated in areas containing input values. Recommended method if not forced to a perfect rectangular result.
 
-###### Examples
+##### Examples
 `umbrellaint.py --dim 1 --out pmf_1d.dat`\
-`umbrellaint.py --dim 1 --out pmf_1d.dat --path examples/1D --temp 313.5 --units kcal --bins 5000`
+`umbrellaint.py --dim 1 --out pmf_1d.dat --path examples/1D --temp 298.15 --units kcal --bins 5000`
 
 `umbrellaint.py --dim 2 --out pmf_2d.dat`\
-`umbrellaint.py --dim 2 --out pmf_2d.dat --path examples/2D --temp 306 --grid 1.5`\
+`umbrellaint.py --dim 2 --out pmf_2d.dat --path ../examples/2D/ --temp 313 --grid 1.5`\
 `umbrellaint.py --dim 2 --temp 328. --igrid --idist 0.04`
 
 
