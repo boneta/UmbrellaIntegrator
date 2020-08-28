@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-'''
+r'''
+
               ,·'´
          __. /.__
      .-"'..':`..`"-.          _   _ __  __ ___ ___ ___ _    _      _
@@ -15,6 +16,7 @@
            /
         .-'                                   method by Kästner & Thiel
                                            implemented by Sergio Boneta
+
 '''
 #######################################################################
 ##                                                                   ##
@@ -47,7 +49,7 @@
 
 
 #######################################################################
-##  Dependences                                                      ##
+##  DEPENDENCIES                                                     ##
 #######################################################################
 ## Support: Python >2.7 and >3.7
 
@@ -61,7 +63,7 @@ try:
     import umbrellaint_fortran
     fortranization = True
 except:
-    sys.stdout.write("WARNING: Umbrella Integrator's fortran subroutines could not be imported" )
+    sys.stdout.write("WARNING: Umbrella Integrator's fortran subroutines could not be imported\n" )
     fortranization = False
 
 # scipy
@@ -101,7 +103,7 @@ kB = _R * 0.001                   # kJ * K-1 * mol-1
 
 
 #######################################################################
-##  Parser                                                           ##
+##  PARSER                                                           ##
 #######################################################################
 
 def __parserbuilder():
@@ -113,14 +115,14 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  0.3 - 13082020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  v0.4.0 - 28082020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
-                        metavar='XD',
+                        metavar='X',
                         required=True,
-                        type=str,
-                        choices=['1D','2D'],
-                        help='dimension of PMF [1D / 2D]')
+                        type=int,
+                        choices=[1,2],
+                        help='dimension of PMF [1 / 2]')
     parser.add_argument('-o',
                         '--out',
                         type=str,
@@ -136,7 +138,7 @@ def __parserbuilder():
     parser.add_argument('-t',
                         '--temp',
                         type=float,
-                        help='temperature (def: 298.)',
+                        help='temperature in Kelvin (def: 298.)',
                         default=298.)
     parser.add_argument('-u',
                         '--units',
@@ -168,8 +170,8 @@ def __parserbuilder():
                         '--grid',
                         type=float,
                         help='multiplicative factor for grid building based\n'+
-                             'on the number of windows in 2D (def: 2.)',
-                        default=2.)
+                             'on the number of windows in 2D (def: 1.5)',
+                        default=1.5)
     parser.add_argument('-ig',
                         '--igrid',
                         action='store_true',
@@ -192,7 +194,8 @@ def __parserbuilder():
 
 ##  Read 1D Data  #####################################################
 def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
-    '''Read 1D data from fDynamo files into arrays
+    '''
+        Read 1D data from fDynamo files into arrays
 
         Parameters
         ----------
@@ -276,7 +279,8 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
 ##  Read 2D Data  #####################################################
 def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
                     equilibration=0, printread=True):
-    '''Read 2D data from fDynamo files into matrices
+    '''
+        Read 2D data from fDynamo files into matrices
 
         Parameters
         ----------
@@ -382,7 +386,8 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
 ##  Read 2D Data - iGrid #############################################
 def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
                           equilibration=0, printread=True):
-    '''Read 2D data from fDynamo files into arrays
+    '''
+        Read 2D data from fDynamo files into arrays
 
         Parameters
         ----------
@@ -479,7 +484,8 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
 ##  Umbrella Integration 1D  ##########################################
 def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
                              a_N, limits, temp=298., integrator='trapz'):
-    '''Umbrella Integration algorithm for 1D
+    '''
+        Umbrella Integration algorithm for 1D
 
         Parameters
         ----------
@@ -578,7 +584,8 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
 def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
                              m_covar, m_N, limits, temp=298.,
                              integrator='trapz+mini', integrate=True):
-    '''Umbrella Integration algorithm for 2D from matrices
+    '''
+        Umbrella Integration algorithm for 2D from matrices
 
         Parameters
         ----------
@@ -709,7 +716,8 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
 
 ##  Incomplete Grid Generator 2D  #####################################
 def igrid_gen(grid_d, a_coord, thr_close=1e-1):
-    '''Incomplete grid generator in 2D
+    '''
+        Incomplete grid generator in 2D
 
         Parameters
         ----------
@@ -764,7 +772,8 @@ def igrid_gen(grid_d, a_coord, thr_close=1e-1):
 
 ##  Incomplete Grid Topology 2D  ######################################
 def igrid_topol(grid_d, grid):
-    '''Incomplete grid topology guessing
+    '''
+        Incomplete grid topology guessing
 
         Parameters
         ----------
@@ -826,7 +835,8 @@ def igrid_topol(grid_d, grid):
 
 ##  Incomplete Grid Gradient 2D  ######################################
 def igrid_grad(A_grid, grid_topol, grid_topol_d):
-    '''Incomplete grid topology gradient calculation
+    '''
+        Incomplete grid topology gradient calculation
 
         Parameters
         ----------
@@ -860,7 +870,8 @@ def igrid_grad(A_grid, grid_topol, grid_topol_d):
 def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
                                    a_N, limits, temp=298.,
                                    thr_close=1e-1, integrate=True):
-    '''Umbrella Integration algorithm for 2D from arrays to a incomplete grid
+    '''
+        Umbrella Integration algorithm for 2D from arrays to a incomplete grid
 
         Parameters
         ----------
@@ -968,7 +979,8 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
 
 ##  Integrate 2D surface  #############################################
 def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
-    '''Integration of a 2D surface from its gradient
+    '''
+        Integration of a 2D surface from its gradient
 
         Parameters
         ----------
@@ -1163,7 +1175,8 @@ def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
 
 ##  Integrate 2D surface - Incomplete Grid ############################
 def integration_2D_igrid(grid_d, grid, dA_grid):
-    '''Integration of a incomplete 2D surface from its gradient
+    '''
+        Integration of a incomplete 2D surface from its gradient
 
         Parameters
         ----------
@@ -1219,7 +1232,8 @@ def integration_2D_igrid(grid_d, grid, dA_grid):
 ##  Write 1D Results  #################################################
 def write_1D(file, bins, A_bins, temp='UNKNOWN', integrator='UNKNOWN',
               samples='UNKNOWN', units='UNKNOWN'):
-    '''Write 1D result into file
+    '''
+        Write 1D result into file
 
         Parameters
         ----------
@@ -1252,10 +1266,11 @@ def write_1D(file, bins, A_bins, temp='UNKNOWN', integrator='UNKNOWN',
         for rc, A in zip(bins, A_bins):
             f.write("{:16.9f}  {:16.9f}\n".format(rc, A))
 
-##  Write 1D Results  #################################################
+##  Write 2D Results  #################################################
 def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
               samples='UNKNOWN', units='UNKNOWN'):
-    '''Write 2D result into file
+    '''
+        Write 2D result into file
 
         Parameters
         ----------
@@ -1291,10 +1306,11 @@ def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
                 f.write("{:16.9f}  {:16.9f}  {:16.9f}\n".format(grid[j,i,0], grid[j,i,1], A_grid[j,i]))
             f.write("\n")
 
-##  Write 1D Results - Incomplete Grid  ###############################
+##  Write 2D Results - Incomplete Grid  ###############################
 def write_2D_igrid(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
                     samples='UNKNOWN', units='UNKNOWN'):
-    '''Write 2D result into file from a incomplete grid
+    '''
+        Write 2D result into file from a incomplete grid
 
         Parameters
         ----------
@@ -1356,8 +1372,8 @@ if __name__ == '__main__':
     igrid        = args.igrid
     grid_d       = args.idist
     if args.int is None:
-        if dimension == '1D': integrator = 'trapz'
-        elif dimension == '2D': integrator = 'trapz+mini'
+        if dimension == 1: integrator = 'trapz'
+        elif dimension == 2: integrator = 'trapz+mini'
     else:
         integrator = args.int
 
@@ -1369,7 +1385,7 @@ if __name__ == '__main__':
     sys.stdout.write("# Dimension: {}\n\n".format(dimension))
 
     ##  1D  ###########################################################
-    if dimension == '1D':
+    if dimension == 1:
         ## read input
         n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration)
         ## umbrella integration
@@ -1380,7 +1396,7 @@ if __name__ == '__main__':
         write_1D(outfile, bins, G, temp=temperature, integrator=integrator, samples=np.mean(a_N), units=units)
 
     ##  2D  ###########################################################
-    if dimension == '2D' and not igrid:
+    if dimension == 2 and not igrid:
         ## check scipy
         if not _scipy:
             raise ImportError('SciPy could not be imported')
@@ -1395,7 +1411,7 @@ if __name__ == '__main__':
         write_2D(outfile, grid, G, temp=temperature, integrator=integrator, samples=np.mean(m_N), units=units)
 
     ##  2D - Incomplete Grid ##########################################
-    elif dimension == '2D' and igrid:
+    elif dimension == 2 and igrid:
         ## check scipy
         if not _scipy:
             raise ImportError('SciPy could not be imported')
