@@ -115,7 +115,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  v0.4.0 - 28082020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  v0.4.1 - 28082020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
                         metavar='X',
@@ -269,7 +269,7 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
 
     # print information
     sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i))
-    sys.stdout.write("# Average samples:  {:<10.2f}\n".format(np.mean(a_N)))
+    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(a_N)))
     sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n\n'.format(limits[0],limits[1]))
     sys.stdout.flush()
 
@@ -375,7 +375,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     # print information
     sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i*n_j))
     sys.stdout.write("# Surface dimensions:  {:d} x {:d}\n".format(n_i, n_j))
-    sys.stdout.write("# Average samples:  {:<10.2f}\n".format(np.mean(m_N)))
+    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(m_N)))
     sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n'
                         '# y_min: {:>7.3f}    y_max: {:>7.3f} \n\n'.format(limits[0,0],limits[0,1],limits[1,0],limits[1,1]))
     sys.stdout.flush()
@@ -473,7 +473,7 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
 
     # print information
     sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i))
-    sys.stdout.write("# Average samples:  {:<10.2f}\n".format(np.mean(a_N)))
+    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(a_N)))
     sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n'
                         '# y_min: {:>7.3f}    y_max: {:>7.3f} \n\n'.format(limits[0,0],limits[0,1],limits[1,0],limits[1,1]))
     sys.stdout.flush()
@@ -1259,7 +1259,7 @@ def write_1D(file, bins, A_bins, temp='UNKNOWN', integrator='UNKNOWN',
         f.write("# No bins: {}\n".format(len(bins)))
         f.write("# Integrator: {}\n".format(integrator))
         f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# Avg samples: {}\n".format(samples))
+        f.write("# No Samples (Avg): {}\n".format(samples))
         f.write("# Units: {}/mol\n#\n".format(units))
         f.write("#  ReactionCoord               PMF\n")
         # data
@@ -1297,7 +1297,7 @@ def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
         f.write("# Grid: {} x {}\n".format(n_i,n_j))
         f.write("# Integrator: {}\n".format(integrator))
         f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# Avg samples: {}\n".format(samples))
+        f.write("# No Samples (Avg): {}\n".format(samples))
         f.write("# Units: {}/mol\n#\n".format(units))
         f.write("#              x                 y               PMF\n")
         # data
@@ -1337,10 +1337,10 @@ def write_2D_igrid(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
     with open(file, 'w') as f:
         # general info
         f.write("## UMBRELLA INTEGRATED\n")
-        f.write("# Grid: No Grid\n")
+        f.write("# Grid: Incomplete Grid\n")
         f.write("# Integrator: {}\n".format(integrator))
         f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# Avg samples: {}\n".format(samples))
+        f.write("# No Samples (Avg): {}\n".format(samples))
         f.write("# Units: {}/mol\n#\n".format(units))
         f.write("#              x                 y               PMF\n")
         # data
@@ -1400,7 +1400,6 @@ if __name__ == '__main__':
         ## check scipy
         if not _scipy:
             raise ImportError('SciPy could not be imported')
-            # sys.stdout.write("WARNING: SciPy could not be imported. Integrator changed to 'trapz'.\n")
         ## read input
         n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration)
         ## umbrella integration
