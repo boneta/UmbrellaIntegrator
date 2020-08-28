@@ -115,7 +115,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  v0.4.1 - 28082020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  v0.5.0 - 28082020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
                         metavar='X',
@@ -309,7 +309,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
             matrix of mean coordinates
         m_covar : ndarray(n_j,n_i,2,2)
             matrix of covariance matrices of coordinates
-        m_N : ndarray(n_j,n_i,2)
+        m_N : ndarray(n_j,n_i)
             matrix of number of samples for each window
         limits : ndarray(2,2)
             matrix of minimum and maximum coordinates
@@ -604,7 +604,7 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
             matrix of mean coordinates
         m_covar : ndarray(n_j,n_i,2,2)
             matrix of covariance matrices of coordinates
-        m_N : ndarray(n_j,n_i,2)
+        m_N : ndarray(n_j,n_i)
             matrix of number of samples for each window
         limits : ndarray(2,2)
             matrix of minimum and maximum coordinates
@@ -673,35 +673,44 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
 
     ## Derivates ------------------------------------------------------
 
-    # normal probability [Kästner 2009 - Eq.9]
-    def probability(rc, j, i):
-        diff = rc - m_mean[j,i]
-        # return np.exp(-0.5 * np.matmul( diff, np.matmul(m_prec[j,i], diff) )) / (m_det_sqrt[j,i] * _tau)
-        return np.exp( -0.5 * diff.dot(m_prec[j,i].dot(diff)) ) / (m_det_sqrt[j,i] * _tau)   # dot faster than matmul for small matrices
+    def derivate():
+        # normal probability [Kästner 2009 - Eq.9]
+        def probability(rc, j, i):
+            diff = rc - m_mean[j,i]
+            # return np.exp(-0.5 * np.matmul( diff, np.matmul(m_prec[j,i], diff) )) / (m_det_sqrt[j,i] * _tau)
+            return np.exp( -0.5 * diff.dot(m_prec[j,i].dot(diff)) ) / (m_det_sqrt[j,i] * _tau)   # dot faster than matmul for small matrices
 
-    # local derivate of free energy [Kästner 2009 - Eq.10]
-    def dA(rc, j, i):
-        # return  np.matmul((rc - m_mean[j,i])/beta, m_prec[j,i])  -  np.matmul((rc - m_rc0[j,i]), m_fc[j,i])
-        return  ((rc - m_mean[j,i])/beta).dot(m_prec[j,i])  -  (rc - m_rc0[j,i]).dot(m_fc[j,i])
+        # local derivate of free energy [Kästner 2009 - Eq.10]
+        def dA(rc, j, i):
+            # return  np.matmul((rc - m_mean[j,i])/beta, m_prec[j,i])  -  np.matmul((rc - m_rc0[j,i]), m_fc[j,i])
+            return ((rc - m_mean[j,i])/beta).dot(m_prec[j,i])  -  (rc - m_rc0[j,i]).dot(m_fc[j,i])
 
-    # normalization total [Kästner 2009 - Eq.11]
-    def normal_tot(rc):
-        return np.sum([m_N[j,i]*probability(rc,j,i) for i in range(n_i) for j in range(n_j)])
+        # normalization total [Kästner 2009 - Eq.11]
+        def normal_tot(rc):
+            return np.sum([m_N[j,i]*probability(rc,j,i) for i in range(n_i) for j in range(n_j)])
 
-    # # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
-    # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_jg) for i in range(n_ig)]).reshape(n_jg,n_ig)
+        # # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
+        # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_jg) for i in range(n_ig)]).reshape(n_jg,n_ig)
 
-    # calculate gradient field of free energy over grid [Kästner 2009 - Eq.11]
-    sys.stdout.write("# Calculating derivates - Grid {} x {}\n".format(n_ig,n_jg))
-    for jg in range(n_jg):
-        for ig in range(n_ig):
-            rc = grid[jg,ig]
-            normal = normal_tot(rc)
-            dA_grid[jg,ig] = np.sum(np.transpose([ m_N[j,i]*probability(rc,j,i)/normal * dA(rc,j,i) for i in range(n_i) for j in range(n_j) ]), axis=1)
-        # progress bar
-        sys.stdout.write("\r# [{:19s}] - {:>6.2f}%".format( "■"*int(19.*(jg+1)/n_jg), (jg+1)/n_jg*100)); sys.stdout.flush()
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+        # calculate gradient field of free energy over grid [Kästner 2009 - Eq.11]
+        sys.stdout.write("# Calculating derivates - Grid {} x {}\n".format(n_ig,n_jg))
+        for jg in range(n_jg):
+            for ig in range(n_ig):
+                rc = grid[jg,ig]
+                normal = normal_tot(rc)
+                dA_grid[jg,ig] = np.sum(np.transpose([ m_N[j,i]*probability(rc,j,i)/normal * dA(rc,j,i) for i in range(n_i) for j in range(n_j) ]), axis=1)
+            # progress bar
+            sys.stdout.write("\r# [{:19s}] - {:>6.2f}%".format( "■"*int(19.*(jg+1)/n_jg), (jg+1)/n_jg*100)); sys.stdout.flush()
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+        return dA_grid
+
+    if fortranization:
+        sys.stdout.write("# Calculating derivates - Grid {:d} x {:d} - Fortranized\n".format(n_ig,n_jg))
+        dA_grid = umbrellaint_fortran.derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
+    else:
+        dA_grid = derivate()
 
 
     ## Integration ----------------------------------------------------
