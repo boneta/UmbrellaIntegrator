@@ -1,5 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+# File: umbrellaint.py
+# Description : Umbrella integration of PMF calculations - 1D & 2D
+# Version : 0.5.1
+# Last update : 29-08-2020
+# Author : Sergio Boneta
 
 r'''
 
@@ -115,7 +121,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  v0.5.0 - 28082020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  v0.5.1 - 29082020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
                         metavar='X',
