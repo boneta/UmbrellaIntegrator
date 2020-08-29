@@ -3,7 +3,7 @@
 
 # File: umbrellaint.py
 # Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.5.1
+# Version : 0.5.2
 # Last update : 29-08-2020
 # Author : Sergio Boneta
 
@@ -121,7 +121,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  v0.5.1 - 29082020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator  v0.5.2 - 29082020\nby Sergio Boneta / GPL')
     parser.add_argument('-d',
                         '--dim',
                         metavar='X',
@@ -183,8 +183,7 @@ def __parserbuilder():
                         action='store_true',
                         help='use incomplete grid instead of a\n'+
                              'rectangular grid based method in 2D\n'+
-                             "(integrator: 'mini', space between points: #idist\n"+
-                             " takes advantage of fortranized functions if available)")
+                             "(integrator: 'mini', space between points: #idist)")
     parser.add_argument('-id',
                         '--idist',
                         type=float,
@@ -389,7 +388,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     # return results
     return n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits
 
-##  Read 2D Data - iGrid #############################################
+##  Read 2D Data - Incomplete Grid  ###################################
 def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
                           equilibration=0, printread=True):
     '''
@@ -534,7 +533,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
     sys.stdout.write("## Umbrella Integration\n")
     beta = 1./(kB*temp)
     tau_sqrt = np.sqrt(_tau)
-    m_var = a_std ** 2
+    a_var = a_std ** 2
     bins = np.linspace(limits[0],limits[1],n_bins)
     db = abs(bins[0] - bins[1])                         # space between bins
     dA_bins = np.zeros_like(bins)
@@ -542,25 +541,33 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
 
     ## Derivates ------------------------------------------------------
 
-    # normal probability [Kästner 2005 - Eq.5]
-    def probability(rc, i):
-        return np.exp(-0.5 * ((rc - a_mean[i])/a_std[i])**2) / (a_std[i] * tau_sqrt)
+    def derivate():
+        # normal probability [Kästner 2005 - Eq.5]
+        def probability(rc, i):
+            return np.exp(-0.5 * ((rc - a_mean[i])/a_std[i])**2) / (a_std[i] * tau_sqrt)
 
-    # local derivate of free energy [Kästner 2005 - Eq.6]
-    def dA(rc, i):
-        return (rc - a_mean[i]) / (beta * m_var[i])  -  a_fc[i] * (rc - a_rc0[i])
+        # local derivate of free energy [Kästner 2005 - Eq.6]
+        def dA(rc, i):
+            return (rc - a_mean[i]) / (beta * a_var[i])  -  a_fc[i] * (rc - a_rc0[i])
 
-    # normalization total [Kästner 2005 - Eq.8]
-    def normal_tot(rc):
-        return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
+        # normalization total [Kästner 2005 - Eq.8]
+        def normal_tot(rc):
+            return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
 
-    # calculate derivates of free energy over the bins [Kästner 2005 - Eq.7]
-    sys.stdout.write("# Calculating derivates - {} bins \n".format(n_bins))
-    for b in range(n_bins):
-        rc = bins[b]
-        normal = normal_tot(rc)
-        dA_bins[b] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
+        # calculate derivates of free energy over the bins [Kästner 2005 - Eq.7]
+        sys.stdout.write("# Calculating derivates - {} bins \n".format(n_bins))
+        for ib in range(n_bins):
+            rc = bins[ib]
+            normal = normal_tot(rc)
+            dA_bins[ib] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
 
+        return dA_bins
+
+    if fortranization:
+        sys.stdout.write("# Calculating derivates - {} bins - Fortranized\n".format(n_bins))
+        dA_bins = umbrellaint_fortran.ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta)
+    else:
+        dA_bins = derivate()
 
     ## Integration ----------------------------------------------------
 
@@ -714,7 +721,7 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
 
     if fortranization:
         sys.stdout.write("# Calculating derivates - Grid {:d} x {:d} - Fortranized\n".format(n_ig,n_jg))
-        dA_grid = umbrellaint_fortran.derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
+        dA_grid = umbrellaint_fortran.ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
     else:
         dA_grid = derivate()
 
@@ -974,7 +981,7 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
 
     if fortranization:
         sys.stdout.write("# Calculating derivates - Incomplete Grid ({:d}) - Fortranized\n".format(n_ig))
-        dA_grid = umbrellaint_fortran.derivate_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
+        dA_grid = umbrellaint_fortran.ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
     else:
         dA_grid = derivate_igrid()
 
