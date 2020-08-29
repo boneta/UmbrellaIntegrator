@@ -1,6 +1,6 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.5.1-brightgreen.svg)
+![GitHub version](https://img.shields.io/badge/version-0.5.2-brightgreen.svg)
 ![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2029--08--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
@@ -23,7 +23,7 @@ Packages:
   - NumPy
   - SciPy (optional for 1D)
 
-Extremely fast functions written in Fortran can be used for 2D methods. To take advantage of them, a f2py module must be compiled once:
+Extremely fast functions written in Fortran optionally available. To take advantage of them, a f2py module must be compiled once. Tested with gfortran.
 
 `python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran`
 
@@ -38,10 +38,10 @@ File naming: 1D: dat_x.# || 2D: dat_x.#.# dat_y.#.#
 
 
 ## Running options
-Built-in help argument (-h).\
+Built-in help (-h).\
 Only mandatory parameter is the dimension of the PMF: 1 or 2\
 Temperature (in Kelvin) and output units (kj/mol or kcal/mol) can be chosen. Default: 298.0K and kj/mol\
-Relative location of the input files is set with '--path'
+Relative location of the input files with '--path'
 
 #### 1 Dimension
 The coordinate is split into equally spaced bins, local derivatives are calculated on each according to umbrella integration equations and the whole trajectory is integrated. The number of bins to use is set with '--bins'.

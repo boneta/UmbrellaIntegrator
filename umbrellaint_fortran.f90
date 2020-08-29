@@ -33,8 +33,100 @@ subroutine point_in(coord, grid, thr, result, n)
 
 end subroutine
 
-!!  Umbrella Intetration derivatives  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta, ni, nj, n_ig, n_jg, dA_grid)
+!!  Umbrella Integration derivatives in 1D  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins, dA_bins)
+
+  !--------------------------------------------------------------------
+  ! Calculate Umbrella Integration's derivates in 1D
+  !--------------------------------------------------------------------
+
+  implicit none
+
+  ! Variable definition
+  integer, intent(in)  :: n                   ! No data elements
+  integer, intent(in)  :: n_bins              ! No bins elements
+  real(8), intent(in)  :: bins(n_bins)
+  real(8), intent(in)  :: a_fc(n)
+  real(8), intent(in)  :: a_rc0(n)
+  real(8), intent(in)  :: a_mean(n)
+  real(8), intent(in)  :: a_std(n)
+  real(8), intent(in)  :: a_N(n)
+  real(8), intent(in)  :: beta
+
+  real(8), intent(out) :: dA_bins(n_bins)
+
+  integer              :: ib, i
+  real(8)              :: rc, normal, derivate(n)
+  real(8), parameter   :: TAU_SQRT=SQRT(8.D0*DATAN(1.D0))
+
+  ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  do ib=1,n_bins
+    rc = bins(ib)
+    normal = normal_tot(rc)
+    ! calculate derivate term of every data point on that grid point
+    do i=1,n
+      derivate(i) = a_N(i)*probability(rc,i)/normal * dA(rc,i)
+    enddo
+    ! sum all the derivates on that grid point
+    dA_bins(ib) = SUM(derivate)
+  enddo
+
+
+  contains
+
+    ! normal probability [Kästner 2009 - Eq.9] ------------------------
+    function probability(rc, i)
+
+      implicit none
+
+      real(8), intent(in)  :: rc
+      integer, intent(in)  :: i
+
+      real(8)              :: probability
+
+      real(8)              :: diff
+
+      diff = rc - a_mean(i)
+      probability = EXP(-0.5D0 * (diff/a_std(i))**2) / (a_std(i)*TAU_SQRT)
+
+    end function
+
+    ! local derivate of free energy [Kästner 2009 - Eq.10] ------------
+    function dA(rc, i)
+
+      implicit none
+
+      real(8), intent(in)  :: rc
+      integer, intent(in)  :: i
+
+      real(8)              :: dA
+
+      dA = (rc - a_mean(i)) / (beta * a_std(i)**2) - a_fc(i) * (rc - a_rc0(i))
+
+    end function
+
+    ! normalization total [Kästner 2009 - Eq.11] ----------------------
+    function normal_tot(rc)
+
+      implicit none
+
+      real(8), intent(in)  :: rc
+
+      real(8)              :: normal_tot
+
+      integer              :: i
+
+      normal_tot = 0.D0
+      do i=1,n
+        normal_tot = normal_tot + a_N(i) * probability(rc, i)
+      enddo
+
+    end function
+
+end subroutine
+
+!!  Umbrella Integration derivatives in 2D  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta, ni, nj, n_ig, n_jg, dA_grid)
 
   !--------------------------------------------------------------------
   ! Calculate Umbrella Integration's derivates in a rectangular grid
@@ -58,6 +150,7 @@ subroutine derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, be
 
   integer              :: ig, jg, i, j
   real(8)              :: rc(2), normal, derivate(nj,ni,2)
+  real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
   ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
   do ig=1,n_ig
@@ -97,7 +190,7 @@ subroutine derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, be
 
       diff = rc - m_mean(j,i,:)
       probability = EXP( -0.5D0 * DOT_PRODUCT(diff,MATMUL(m_prec(j,i,:,:),diff)) )  &
-                    / (m_det_sqrt(j,i) * 8.D0*DATAN(1.D0))
+                    / (m_det_sqrt(j,i) * TAU)
 
     end function
 
@@ -138,8 +231,8 @@ subroutine derivate_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, be
 
 end subroutine
 
-!!  Umbrella Intetration derivatives for igrid  !!!!!!!!!!!!!!!!!!!!!!!
-subroutine derivate_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible, n, n_ig, dA_grid)
+!!  Umbrella Integration derivatives for igrid in 2D  !!!!!!!!!!!!!!!!!
+subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible, n, n_ig, dA_grid)
 
   !--------------------------------------------------------------------
   ! Calculate Umbrella Integration's derivates in a incomplete grid
@@ -163,8 +256,9 @@ subroutine derivate_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, be
   real(8), intent(out) :: dA_grid(n_ig,2)
 
   integer              :: ig, i
-  real(8), parameter   :: thr = 1.D-9     ! consider impossible if lower
   real(8)              :: rc(2), normal, derivate(n,2)
+  real(8), parameter   :: thr=1.D-9           ! consider impossible if lower
+  real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
   ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
   do ig=1,n_ig
@@ -202,7 +296,7 @@ subroutine derivate_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, be
 
       diff = rc - a_mean(i,:)
       probability = EXP( -0.5D0 * DOT_PRODUCT(diff,MATMUL(a_prec(i,:,:),diff)) )  &
-                    / (a_det_sqrt(i) * 8.D0*DATAN(1.D0))
+                    / (a_det_sqrt(i) * TAU)
 
     end function
 
