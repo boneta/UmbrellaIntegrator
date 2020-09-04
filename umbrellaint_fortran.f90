@@ -37,7 +37,7 @@ end subroutine
 subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins, dA_bins)
 
   !--------------------------------------------------------------------
-  ! Calculate Umbrella Integration's derivates in 1D
+  ! Calculate Umbrella Integration's derivatives in 1D
   !--------------------------------------------------------------------
 
   implicit none
@@ -59,22 +59,22 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
   real(8)              :: rc, normal, derivate(n)
   real(8), parameter   :: TAU_SQRT=SQRT(8.D0*DATAN(1.D0))
 
-  ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  ! calculate gradient field of free energy over array grid [Kästner 2005 - Eq.7]
   do ib=1,n_bins
     rc = bins(ib)
     normal = normal_tot(rc)
-    ! calculate derivate term of every data point on that grid point
+    ! calculate derivative term of every data point on that grid point
     do i=1,n
       derivate(i) = a_N(i)*probability(rc,i)/normal * dA(rc,i)
     enddo
-    ! sum all the derivates on that grid point
+    ! sum all the derivatives on that grid point
     dA_bins(ib) = SUM(derivate)
   enddo
 
 
   contains
 
-    ! normal probability [Kästner 2009 - Eq.9] ------------------------
+    ! normal probability [Kästner 2005 - Eq.5] ------------------------
     function probability(rc, i)
 
       implicit none
@@ -91,7 +91,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
 
     end function
 
-    ! local derivate of free energy [Kästner 2009 - Eq.10] ------------
+    ! local derivative of free energy [Kästner 2005 - Eq.6] ------------
     function dA(rc, i)
 
       implicit none
@@ -105,7 +105,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
 
     end function
 
-    ! normalization total [Kästner 2009 - Eq.11] ----------------------
+    ! normalization total [Kästner 2005 - Eq.8] ----------------------
     function normal_tot(rc)
 
       implicit none
@@ -129,7 +129,7 @@ end subroutine
 subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta, ni, nj, n_ig, n_jg, dA_grid)
 
   !--------------------------------------------------------------------
-  ! Calculate Umbrella Integration's derivates in a rectangular grid
+  ! Calculate Umbrella Integration's derivatives in a rectangular grid
   !--------------------------------------------------------------------
 
   implicit none
@@ -157,13 +157,13 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
     do jg=1,n_jg
       rc = grid(jg,ig,:)
       normal = normal_tot(rc)
-      ! calculate derivate term of every data point on that grid point
+      ! calculate derivative term of every data point on that grid point
       do i=1,ni
         do j=1,nj
           derivate(j,i,:) = m_N(j,i)*probability(rc,j,i)/normal * dA(rc,j,i)
         enddo
       enddo
-      ! sum all the derivates on that grid point
+      ! sum all the derivatives on that grid point
       dA_grid(jg,ig,:) = (/ 0.D0, 0.D0 /)
       do i=1,ni
         do j=1,nj
@@ -194,7 +194,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
 
     end function
 
-    ! local derivate of free energy [Kästner 2009 - Eq.10] ------------
+    ! local derivative of free energy [Kästner 2009 - Eq.10] ------------
     function dA(rc, j, i)
 
       implicit none
@@ -235,7 +235,7 @@ end subroutine
 subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible, n, n_ig, dA_grid)
 
   !--------------------------------------------------------------------
-  ! Calculate Umbrella Integration's derivates in a incomplete grid
+  ! Calculate Umbrella Integration's derivatives in a incomplete grid
   !--------------------------------------------------------------------
 
   implicit none
@@ -265,11 +265,11 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
     rc = grid(ig,:)
     normal = normal_tot(rc)
     if (normal > thr) then
-      ! calculate derivate term of every data point on that grid point
+      ! calculate derivative term of every data point on that grid point
       do i=1,n
         derivate(i,:) = a_N(i)*probability(rc,i)/normal * dA(rc,i)
       enddo
-      ! sum all the derivates on that grid point
+      ! sum all the derivatives on that grid point
       dA_grid(ig,:) = (/ 0.D0, 0.D0 /)
       do i=1,n
         dA_grid(ig,:) = dA_grid(ig,:) + derivate(i,:)
@@ -300,7 +300,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
 
     end function
 
-    ! local derivate of free energy [Kästner 2009 - Eq.10] ------------
+    ! local derivative of free energy [Kästner 2009 - Eq.10] ------------
     function dA(rc, i)
 
       implicit none
