@@ -1,7 +1,7 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.5.2-brightgreen.svg)
-![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2029--08--2020-green.svg)
+![GitHub version](https://img.shields.io/badge/version-0.5.3-brightgreen.svg)
+![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2004--09--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -21,7 +21,7 @@ Compatible with Python 2 (no warranty)
 
 Packages:
   - NumPy
-  - SciPy (optional for 1D)
+  - SciPy (only needed for 2D)
 
 Extremely fast functions written in Fortran optionally available. To take advantage of them, a f2py module must be compiled once. Tested with gfortran.
 
