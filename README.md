@@ -1,7 +1,7 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.5.3-brightgreen.svg)
-![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2004--09--2020-green.svg)
+![GitHub version](https://img.shields.io/badge/version-0.5.4-brightgreen.svg)
+![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2015--10--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -49,9 +49,9 @@ The coordinate is split into equally spaced bins, local derivatives are calculat
 #### 2 Dimensions
 Two working modes available:
 
- - *Rectangular grid* : Default mode. The PMF points are forced into a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--grid' parameter. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
+ - *Rectangular grid* : Default mode. The PMF points are placed in a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--grid' parameter and based on the initial files. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
 
- - *Incomplete grid* : Activated with '--igrid'. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into a equally spaced grid with '--idist' distance between points. The surface is only generated in areas containing input values. Recommended method if not forced to a perfect rectangular result.
+ - *Incomplete grid* : Activated with '--igrid'. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into an equally spaced grid with '--idist' distance between points. The surface is only generated in areas containing input values. Recommended method if not restricted to a perfect rectangular result.
 
 #### Examples
 `umbrellaint.py --dim 1 --out pmf_1d.dat`\
