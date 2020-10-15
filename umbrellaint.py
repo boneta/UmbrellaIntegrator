@@ -3,8 +3,8 @@
 
 # File: umbrellaint.py
 # Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.5.3
-# Last update : 04-09-2020
+# Version : 0.5.4
+# Last update : 15-10-2020
 # Author : Sergio Boneta
 
 r'''
@@ -153,6 +153,12 @@ def __parserbuilder():
                         choices=['kj','kcal'],
                         help='output units per mol [kj / kcal] (def: kj)',
                         default='kj')
+    parser.add_argument('-m',
+                        '--minsteps',
+                        metavar='#',
+                        type=int,
+                        help='minimum number of steps to take a file (def: 0)',
+                        default=0)
     parser.add_argument('-i',
                         '--int',
                         metavar='INT',
@@ -201,7 +207,7 @@ def __parserbuilder():
 #######################################################################
 
 ##  Read 1D Data  #####################################################
-def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
+def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printread=True):
     '''
         Read 1D data from fDynamo files into arrays
 
@@ -213,6 +219,8 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
             prefix of files (def: 'dat_x')
         equilibration : int
             number of steps considered equilibration and excluded (def: 0)
+        minsteps : int
+            minimum number of steps to be taken in consideration (def: 0)
         printread : bool
             print file names while reading
 
@@ -246,15 +254,19 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
     n_i = int(len(coor1))
 
     # initialize 1D matrices
-    a_fc    = np.zeros((n_i), dtype=float)                             # force constants
-    a_rc0   = np.zeros_like(a_fc)                                      # initial distance set
-    a_mean  = np.zeros_like(a_fc)                                      # mean of distance
-    a_std   = np.zeros_like(a_fc)                                      # standard deviation of distance
-
+    a_rc0   = np.zeros((n_i), dtype=float)                             # initial distance set
+    a_mean  = np.zeros_like(a_rc0)                                     # mean of distance
+    a_fc    = np.zeros_like(a_rc0)                                     # force constants
+    a_std   = np.zeros_like(a_rc0)                                     # standard deviation of distance
     a_N     = np.zeros((n_i), dtype=int)                               # number of samples
+    removef = []                                                       # files to remove
 
     # read 'dat_*' files
     for fx, i in zip(coor1, range(n_i)):
+        # check if empty file
+        if os.stat(os.path.join(directory, fx)).st_size == 0:
+            removef.append(i)
+            continue
         # open/read file
         datx = open(os.path.join(directory, fx)).readlines()
         # force and initial distance
@@ -265,8 +277,24 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, printread=True):
         a_mean[i] = np.mean(datx)
         a_std[i]  = np.std(datx)
         a_N[i] = len(datx)
+        # remove if not minimum steps
+        if a_N[i] < minsteps:
+            removef.append(i)
+            continue
         # print progress
         if printread: sys.stdout.write("{:s}  -  {:d}\n".format(fx, a_N[i]))
+
+    # delete empty files
+    if removef:
+        n_i   -= len(removef)
+        a_rc0  = np.delete(a_rc0, removef)
+        a_mean = np.delete(a_mean, removef)
+        a_fc   = np.delete(a_fc, removef)
+        a_std  = np.delete(a_std, removef)
+        a_N    = np.delete(a_N, removef)
+
+    # check if any suitable data left
+    if n_i == 0: raise ValueError('No suitable files found')
 
     # build data matrix and get limits
     limits = np.zeros((2), dtype=float)
@@ -343,15 +371,16 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     # initialize matrices 3D: rectangular jxi
     m_rc0   = np.zeros((n_j, n_i, 2), dtype=float)                     # initial distance set (depth 2)
     m_mean  = np.zeros_like(m_rc0)                                     # mean of distance (depth 2)
-
     m_fc    = np.zeros((n_j, n_i, 2, 2), dtype=float)                  # force constants matrices (2,2)
     m_covar = np.zeros_like(m_fc)                                      # covariance of distance matrices (2,2)
-
     m_N     = np.zeros((n_j, n_i), dtype=int)                          # number of samples (2D matrix)
 
     # read 'dat_*' files
     line0 = np.zeros((2,2), dtype=float)
     for fx, fy in zip(coor1, coor2):
+        # check if empty file
+        if os.stat(os.path.join(directory, fx)).st_size == 0 or os.stat(os.path.join(directory, fy)).st_size == 0:
+            raise ValueError('Empty file found: {} {}'.format(fx,fy))
         # set i,j and open/read files
         name, i, j = fx.split('.')
         i, j = int(i), int(j)
@@ -393,7 +422,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
 
 ##  Read 2D Data - Incomplete Grid  ###################################
 def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
-                          equilibration=0, printread=True):
+                          equilibration=0, minsteps=0, printread=True):
     '''
         Read 2D data from fDynamo files into arrays
 
@@ -407,6 +436,8 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
             prefix of y files (def: 'dat_y')
         equilibration : int
             number of steps considered equilibration and excluded (def: 0)
+        minsteps : int
+            minimum number of steps to be taken in consideration (def: 0)
         printread : bool
             print file names while reading
 
@@ -444,15 +475,19 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
     # initialize arrays
     a_rc0   = np.zeros((n_i, 2), dtype=float)                          # initial distance set
     a_mean  = np.zeros_like(a_rc0)                                     # mean of distance
-
     a_fc    = np.zeros((n_i, 2, 2), dtype=float)                       # force constants matrices (2,2)
     a_covar = np.zeros_like(a_fc)                                      # covariance of distance matrices (2,2)
-
     a_N     = np.zeros((n_i), dtype=int)                               # number of samples
+    removef = []                                                       # files to remove
+
 
     # read 'dat_*' files
     line0 = np.zeros((2,2), dtype=float)
     for fx, fy, i in zip(coor1, coor2, range(n_i)):
+        # check if empty file
+        if os.stat(os.path.join(directory, fx)).st_size == 0 or os.stat(os.path.join(directory, fy)).st_size == 0:
+            removef.append(i)
+            continue
         # open/read files
         datx = open(os.path.join(directory, fx)).readlines()
         daty = open(os.path.join(directory, fy)).readlines()
@@ -468,8 +503,24 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
         a_mean[i,:] = np.mean(datx), np.mean(daty)
         a_covar[i] = np.cov(datx, daty)
         a_N[i] = len(datx)
+        # remove if not minimum steps
+        if a_N[i] < minsteps:
+            removef.append(i)
+            continue
         # print progress
         if printread: sys.stdout.write("{:s}  {:s}  -  {:d}\n".format(fx, fy, a_N[i]))
+
+    # delete empty files
+    if removef:
+        n_i   -= len(removef)
+        a_rc0   = np.delete(a_rc0, removef, 0)
+        a_mean  = np.delete(a_mean, removef, 0)
+        a_fc    = np.delete(a_fc, removef, 0)
+        a_covar = np.delete(a_covar, removef, 0)
+        a_N     = np.delete(a_N, removef, 0)
+
+    # check if any suitable data left
+    if n_i == 0: raise ValueError('No suitable files found')
 
     # get limits
     limits = np.zeros((2,2), dtype=float)
@@ -988,9 +1039,11 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
     else:
         dA_grid = derivate_igrid()
 
-    # check for 'impossible' values
-    # TODO: just remove 'impossible' values and continue
-    if impossible in dA_grid: raise ValueError('A grid point is too far from data')
+    # remove 'impossible' values
+    if impossible in dA_grid:
+        removef = np.unique(np.where(dA_grid == impossible)[0])
+        grid = np.delete(grid, removef, 0)
+        dA_grid = np.delete(dA_grid, removef, 0)
 
     ## Integration ----------------------------------------------------
     if integrate:
@@ -1392,6 +1445,7 @@ if __name__ == '__main__':
     directory    = args.path
     temperature  = args.temp
     units        = args.units
+    minsteps     = args.minsteps
     n_bins       = args.bins
     grid_f       = args.grid
     igrid        = args.igrid
@@ -1413,7 +1467,7 @@ if __name__ == '__main__':
     ##  1D  ###########################################################
     if dimension == 1:
         ## read input
-        n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration)
+        n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration, minsteps, True)
         ## umbrella integration
         bins, dG, G = umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits, temp=temperature, integrator=integrator)
         ## write output
@@ -1427,7 +1481,7 @@ if __name__ == '__main__':
         if not _scipy:
             raise ImportError('SciPy could not be imported')
         ## read input
-        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration)
+        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration, True)
         ## umbrella integration
         grid, dG, G = umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator)
         ## write output
@@ -1441,7 +1495,7 @@ if __name__ == '__main__':
         if not _scipy:
             raise ImportError('SciPy could not be imported')
         ## read input
-        a_fc, a_rc0, a_mean, a_covar, a_N, limits = read_dynamo_2D_igrid(directory, name1, name2, equilibration)
+        a_fc, a_rc0, a_mean, a_covar, a_N, limits = read_dynamo_2D_igrid(directory, name1, name2, equilibration, minsteps, True)
         ## umbrella integration
         grid, dG, G = umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar, a_N, limits, temp=temperature)
         ## write output
