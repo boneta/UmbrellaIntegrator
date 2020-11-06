@@ -3,8 +3,8 @@
 
 # File: umbrellaint.py
 # Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.5.4
-# Last update : 15-10-2020
+# Version : 0.5.5
+# Last update : 06-11-2020
 # Author : Sergio Boneta
 
 r'''
@@ -23,7 +23,29 @@ r'''
         .-'                                   method by Kästner & Thiel
                                            implemented by Sergio Boneta
 
+
+Functions
+---------
+
+    read_dynamo_1D
+    read_dynamo_2D
+    read_dynamo_2D_igrid
+    umbrella_integration_1D
+    umbrella_integration_2D
+    umbrella_integration_2D_igrid
+    igrid_gen
+    igrid_topol
+    igrid_grad
+    integration_2D
+    integration_2D_igrid
+    write_1D
+    write_2D
+    write_2D_igrid
+
 '''
+
+__version__ = '0.5.5'
+
 #######################################################################
 ##                                                                   ##
 ##                        Umbrella Integrator                        ##
@@ -74,7 +96,7 @@ except:
 
 # scipy
 try:
-    import scipy.optimize as optimize
+    from scipy import optimize
     _scipy = True
 except ImportError:
     _scipy = False
@@ -85,8 +107,6 @@ except ImportError:
 #######################################################################
 
 ## Predefined variables
-name1 = 'dat_x'
-name2 = 'dat_y'
 equilibration = 0           # initial equilibration frames to skip
 impossible = 0.123456789    # unlikely value used to denote 'False' in float format
 
@@ -121,7 +141,7 @@ def __parserbuilder():
     parser.add_argument('-v',
                         '--version',
                         action='version',
-                        version='Umbrella Integrator  v0.5.3 - 04092020\nby Sergio Boneta / GPL')
+                        version='Umbrella Integrator v{} / GPL'.format(__version__))
     parser.add_argument('-d',
                         '--dim',
                         metavar='X',
@@ -137,7 +157,7 @@ def __parserbuilder():
     parser.add_argument('-p',
                         '--path',
                         type=str,
-                        help='dat_* files path (def: current dir)\n'+
+                        help='files path (def: current dir)\n'+
                              ' 1D   dat_x.#\n'+
                              ' 2D   dat_x.#.#  dat_y.#.#',
                         default='.')
@@ -148,7 +168,7 @@ def __parserbuilder():
                         default=298.)
     parser.add_argument('-u',
                         '--units',
-                        metavar='UNITS',
+                        metavar='U',
                         type=str,
                         choices=['kj','kcal'],
                         help='output units per mol [kj / kcal] (def: kj)',
@@ -192,10 +212,18 @@ def __parserbuilder():
                              "(integrator: 'mini', space between points: #idist)")
     parser.add_argument('-id',
                         '--idist',
+                        metavar='D',
                         type=float,
                         help='distance between grid points for incomplete\n'+
                              'grid based method in 2D (def: 0.05)\n',
                         default=0.05)
+    parser.add_argument('--names',
+                        type=str,
+                        nargs=2,
+                        metavar=('dat_x','dat_y'),
+                        help='basename of the input files for x and y\n'+
+                             'coordinates (def: dat_x dat_y)\n',
+                        default=['dat_x', 'dat_y'])
     parser.add_argument('--nofortran',
                         action='store_true',
                         help=argparse.SUPPRESS)
@@ -1450,6 +1478,8 @@ if __name__ == '__main__':
     grid_f       = args.grid
     igrid        = args.igrid
     grid_d       = args.idist
+    name1        = args.names[0]
+    name2        = args.names[1]
     if args.int is None:
         if dimension == 1: integrator = 'trapz'
         elif dimension == 2: integrator = 'trapz+mini'
