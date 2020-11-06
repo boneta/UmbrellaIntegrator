@@ -1,7 +1,7 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.5.4-brightgreen.svg)
-![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2015--10--2020-green.svg)
+![GitHub version](https://img.shields.io/badge/version-0.5.5-brightgreen.svg)
+![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2006--11--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -17,13 +17,13 @@
 
 ## Requirements
 *Python 3.7* \
-Compatible with Python 2 (no warranty)
+Python 2 compatible (no warranty)
 
 Packages:
   - NumPy
   - SciPy (only needed for 2D)
 
-Extremely fast functions written in Fortran optionally available. To take advantage of them, a f2py module must be compiled once. Tested with gfortran.
+Extremely fast functions written in Fortran are optionally available. To take advantage of them, a f2py module must be compiled once. Tested with gfortran.
 
 `python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran`
 
@@ -34,7 +34,7 @@ Currently supported fDynamo style files. Examples are provided.
 
 First line: Force Constant and Reference Distance \
 Rest of lines: Distances Sampled \
-File naming: 1D: dat_x.# || 2D: dat_x.#.# dat_y.#.#
+Default file naming: 1D: dat_x.# || 2D: dat_x.#.# dat_y.#.#
 
 
 ## Running options
