@@ -3,8 +3,8 @@
 
 # File: umbrellaint.py
 # Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.5.5
-# Last update : 06-11-2020
+# Version : 0.5.6
+# Last update : 13-07-2021
 # Author : Sergio Boneta
 
 r'''
@@ -44,7 +44,7 @@ Functions
 
 '''
 
-__version__ = '0.5.5'
+__version__ = '0.5.6'
 
 #######################################################################
 ##                                                                   ##
@@ -52,7 +52,7 @@ __version__ = '0.5.5'
 ##                                                                   ##
 #######################################################################
 #
-# Copyright (C) 2020, Sergio Boneta
+# Copyright (C) 2021, Sergio Boneta
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -84,6 +84,7 @@ __version__ = '0.5.5'
 import os
 import sys
 import argparse
+
 import numpy as np
 
 # fortranized key functions
@@ -127,108 +128,6 @@ _J2cal   = 1./_cal2J              # J -> cal
 # redefinition of kB (kJ and per mol)
 kB = _R * 0.001                   # kJ * K-1 * mol-1
 
-
-#######################################################################
-##  PARSER                                                           ##
-#######################################################################
-
-def __parserbuilder():
-    '''Build parser for CLI'''
-
-    parser = argparse.ArgumentParser(prog='umbrellaint.py',
-                                    description=' -- Umbrella Integration of PMF calculations - 1D & 2D --\n',
-                                    formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-v',
-                        '--version',
-                        action='version',
-                        version='Umbrella Integrator v{} / GPL'.format(__version__))
-    parser.add_argument('-d',
-                        '--dim',
-                        metavar='X',
-                        required=True,
-                        type=int,
-                        choices=[1,2],
-                        help='dimension of PMF [1 / 2]')
-    parser.add_argument('-o',
-                        '--out',
-                        type=str,
-                        help='file name for output (def: PMF-UI.dat)',
-                        default='PMF-UI.dat')
-    parser.add_argument('-p',
-                        '--path',
-                        type=str,
-                        help='files path (def: current dir)\n'+
-                             ' 1D   dat_x.#\n'+
-                             ' 2D   dat_x.#.#  dat_y.#.#',
-                        default='.')
-    parser.add_argument('-t',
-                        '--temp',
-                        type=float,
-                        help='temperature in Kelvin (def: 298.)',
-                        default=298.)
-    parser.add_argument('-u',
-                        '--units',
-                        metavar='U',
-                        type=str,
-                        choices=['kj','kcal'],
-                        help='output units per mol [kj / kcal] (def: kj)',
-                        default='kj')
-    parser.add_argument('-m',
-                        '--minsteps',
-                        metavar='#',
-                        type=int,
-                        help='minimum number of steps to take a file (def: 0)',
-                        default=0)
-    parser.add_argument('-i',
-                        '--int',
-                        metavar='INT',
-                        type=str,
-                        choices=['trapz','simpson','mini','trapz+mini'],
-                        help='integration method for the derivatives\n'+
-                             ' 1D\n'+
-                             "   'trapz'      - composite trapezoidal rule (def)\n"+
-                             "   'simpson'    - Simpson's rule\n"+
-                             ' 2D\n'+
-                             "   'mini'        - real space grid minimization\n"+
-                             "   'trapz+mini'  - trapezoidal integration as initial guess \n"+
-                             "                   for real space grid minimization (def)\n"+
-                             "   'fourier'     - expansion in a Fourier series (not working)")
-    parser.add_argument('-b',
-                        '--bins',
-                        type=int,
-                        help='number of bins in 1D (def: 2000)',
-                        default=2000)
-    parser.add_argument('-g',
-                        '--grid',
-                        type=float,
-                        help='multiplicative factor for grid building based\n'+
-                             'on the number of windows in 2D (def: 1.5)',
-                        default=1.5)
-    parser.add_argument('-ig',
-                        '--igrid',
-                        action='store_true',
-                        help='use incomplete grid instead of a\n'+
-                             'rectangular grid based method in 2D\n'+
-                             "(integrator: 'mini', space between points: #idist)")
-    parser.add_argument('-id',
-                        '--idist',
-                        metavar='D',
-                        type=float,
-                        help='distance between grid points for incomplete\n'+
-                             'grid based method in 2D (def: 0.05)\n',
-                        default=0.05)
-    parser.add_argument('--names',
-                        type=str,
-                        nargs=2,
-                        metavar=('dat_x','dat_y'),
-                        help='basename of the input files for x and y\n'+
-                             'coordinates (def: dat_x dat_y)\n',
-                        default=['dat_x', 'dat_y'])
-    parser.add_argument('--nofortran',
-                        action='store_true',
-                        help=argparse.SUPPRESS)
-
-    return parser
 
 #######################################################################
 ##  FUNCTIONS                                                        ##
@@ -1461,13 +1360,68 @@ def write_2D_igrid(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
 #######################################################################
 ##  MAIN                                                             ##
 #######################################################################
-if __name__ == '__main__':
+def main():
 
-    # parser
-    parser = __parserbuilder()
-    args = parser.parse_args()
+    ##  PARSER  #######################################################
+    parser = argparse.ArgumentParser(description=' -- Umbrella Integration of PMF calculations - 1D & 2D --\n',
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-v', '--version', action='version',
+                        version='Umbrella Integrator v{} / GPL'.format(__version__))
+    parser.add_argument('-d', '--dim', metavar='X', type=int,
+                        choices=[1,2], required=True,
+                        help='dimension of PMF [1 / 2]')
+    parser.add_argument('-o', '--out', type=str,
+                        help='file name for output (def: PMF-UI.dat)',
+                        default='PMF-UI.dat')
+    parser.add_argument('-p', '--path', type=str,
+                        help='files path (def: current dir)\n'+
+                             ' 1D   dat_x.#\n'+
+                             ' 2D   dat_x.#.#  dat_y.#.#',
+                        default='.')
+    parser.add_argument('-t', '--temp', type=float,
+                        help='temperature in Kelvin (def: 298.)',
+                        default=298.)
+    parser.add_argument('-u', '--units', metavar='U', type=str,
+                        choices=['kj','kcal'],
+                        help='output units per mol [kj / kcal] (def: kj)',
+                        default='kj')
+    parser.add_argument('-m', '--minsteps', metavar='#', type=int,
+                        help='minimum number of steps to take a file (def: 0)',
+                        default=0)
+    parser.add_argument('-i', '--int', metavar='INT', type=str,
+                        choices=['trapz','simpson','mini','trapz+mini'],
+                        help='integration method for the derivatives\n'+
+                             ' 1D\n'+
+                             "   'trapz'       - composite trapezoidal rule (def)\n"+
+                             "   'simpson'     - Simpson's rule\n"+
+                             ' 2D\n'+
+                             "   'mini'        - real space grid minimization\n"+
+                             "   'trapz+mini'  - trapezoidal integration as initial guess \n"+
+                             "                   for real space grid minimization (def)\n"+
+                             "   'fourier'     - expansion in a Fourier series (not working)")
+    parser.add_argument('-b', '--bins', type=int,
+                        help='number of bins in 1D (def: 2000)',
+                        default=2000)
+    parser.add_argument('-g', '--grid', type=float,
+                        help='multiplicative factor for grid building based\n'+
+                             'on the number of windows in 2D (def: 1.5)',
+                        default=1.5)
+    parser.add_argument('-ig', '--igrid', action='store_true',
+                        help='use incomplete grid instead of a\n'+
+                             'rectangular grid based method in 2D\n'+
+                             "(integrator: 'mini', space between points: #idist)")
+    parser.add_argument('-id', '--idist', metavar='D', type=float,
+                        help='distance between grid points for incomplete\n'+
+                             'grid based method in 2D (def: 0.05)\n',
+                        default=0.05)
+    parser.add_argument('--names', type=str, nargs=2, metavar=('dat_x','dat_y'),
+                        help='basename of the input files for x and y\n'+
+                             'coordinates (def: dat_x dat_y)\n',
+                        default=['dat_x', 'dat_y'])
+    parser.add_argument('--nofortran', action='store_true', help=argparse.SUPPRESS)
 
     # assignation of input variables
+    args = parser.parse_args()
     dimension    = args.dim
     outfile      = args.out
     directory    = args.path
@@ -1534,3 +1488,7 @@ if __name__ == '__main__':
         write_2D_igrid(outfile, grid, G, temp=temperature, integrator='mini', samples=np.mean(a_N), units=units)
 
     sys.stdout.write("# Integration finished! \n")
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
