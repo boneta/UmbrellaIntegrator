@@ -34,7 +34,7 @@ Currently supported fDynamo style files. Examples are provided.
 
 First line: Force Constant and Reference Distance \
 Rest of lines: Distances Sampled \
-Default file naming: 1D: dat_x.# || 2D: dat_x.#.# dat_y.#.#
+Default file naming: 1D: dat_1.# || 2D: dat_1.#.# dat_2.#.#
 
 
 ## Running options

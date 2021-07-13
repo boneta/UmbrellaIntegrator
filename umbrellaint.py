@@ -1414,10 +1414,10 @@ def main():
                         help='distance between grid points for incomplete\n'+
                              'grid based method in 2D (def: 0.05)\n',
                         default=0.05)
-    parser.add_argument('--names', type=str, nargs=2, metavar=('dat_x','dat_y'),
+    parser.add_argument('--names', type=str, nargs=2, metavar=('dat_1','dat_2'),
                         help='basename of the input files for x and y\n'+
-                             'coordinates (def: dat_x dat_y)\n',
-                        default=['dat_x', 'dat_y'])
+                             'coordinates (def: dat_1 dat_2)\n',
+                        default=['dat_1', 'dat_2'])
     parser.add_argument('--nofortran', action='store_true', help=argparse.SUPPRESS)
 
     # assignation of input variables
