@@ -1,7 +1,5 @@
 # Umbrella Integrator
 
-![GitHub version](https://img.shields.io/badge/version-0.5.5-brightgreen.svg)
-![Last Uptade](https://img.shields.io/badge/%F0%9F%93%85%20last%20update%20-%2006--11--2020-green.svg)
 ![python](https://img.shields.io/badge/python-3.7-red.svg)
 ![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
