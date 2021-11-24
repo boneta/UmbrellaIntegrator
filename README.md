@@ -36,7 +36,7 @@ Then, to take advantage of extremely fast functions written in Fortran, a f2py m
 
 ## Input format
 
-Currently supported fDynamo style files. Examples are available.
+Currently supported fDynamo style files. Examples are provided.
 
 First line: Force Constant and Reference Distance  
 Rest of lines: Distances Sampled  
@@ -60,6 +60,7 @@ Two working modes available:
  - *Rectangular grid* : Activated with '--rectangular'. The PMF points are placed in a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--grid' parameter and based on the initial files. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
 
 #### Examples
+Download the example files from [here](https://github.com/boneta/UmbrellaIntegrator/releases/latest)  
 `umbrellaint --dim 1 --out pmf_1d.dat`  
 `umbrellaint --dim 1 --out pmf_1d.dat --path examples/1D --temp 298.15 --units kcal --bins 5000`
 
