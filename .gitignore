@@ -3,3 +3,10 @@
 **/__pycache__/
 
 examples
+
+# distribution / packaging
+build/
+dist/
+*.egg-info
+
+.vscode
