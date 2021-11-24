@@ -1403,18 +1403,17 @@ def main():
     parser.add_argument('-b', '--bins', type=int,
                         help='number of bins in 1D (def: 2000)',
                         default=2000)
-    parser.add_argument('-g', '--grid', type=float,
-                        help='multiplicative factor for grid building based\n'+
-                             'on the number of windows in 2D (def: 1.5)',
-                        default=1.5)
-    parser.add_argument('-ig', '--igrid', action='store_true',
-                        help='use incomplete grid instead of a\n'+
-                             'rectangular grid based method in 2D\n'+
-                             "(integrator: 'mini', space between points: #idist)")
-    parser.add_argument('-id', '--idist', metavar='D', type=float,
+    parser.add_argument('--dist', metavar='D', type=float,
                         help='distance between grid points for incomplete\n'+
                              'grid based method in 2D (def: 0.05)\n',
                         default=0.05)
+    parser.add_argument('--rectangular', action='store_true',
+                        help='force the use of a rectangular grid instead\n'+
+                             'of an incomplete grid method in 2D\n'),
+    parser.add_argument('--grid', type=float,
+                        help='multiplicative factor for rectangular grid building\n'+
+                             'based on the number of windows in 2D (def: 1.5)',
+                        default=1.5)
     parser.add_argument('--names', type=str, nargs=2, metavar=('dat_1','dat_2'),
                         help='basename of the input files for x and y\n'+
                              'coordinates (def: dat_1 dat_2)\n',
@@ -1430,9 +1429,9 @@ def main():
     units        = args.units
     minsteps     = args.minsteps
     n_bins       = args.bins
+    grid_d       = args.dist
+    rectangular  = args.rectangular
     grid_f       = args.grid
-    igrid        = args.igrid
-    grid_d       = args.idist
     name1        = args.names[0]
     name2        = args.names[1]
     if args.int is None:
@@ -1460,8 +1459,8 @@ def main():
         sys.stdout.write("# Writing output file\n\n")
         write_1D(outfile, bins, G, temp=temperature, integrator=integrator, samples=np.mean(a_N), units=units)
 
-    ##  2D  ###########################################################
-    if dimension == 2 and not igrid:
+    ##  2D - Rectangular Grid #########################################
+    if dimension == 2 and rectangular:
         ## check scipy
         if not _scipy:
             raise ImportError('SciPy could not be imported')
@@ -1475,7 +1474,7 @@ def main():
         write_2D(outfile, grid, G, temp=temperature, integrator=integrator, samples=np.mean(m_N), units=units)
 
     ##  2D - Incomplete Grid ##########################################
-    elif dimension == 2 and igrid:
+    elif dimension == 2:
         ## check scipy
         if not _scipy:
             raise ImportError('SciPy could not be imported')
