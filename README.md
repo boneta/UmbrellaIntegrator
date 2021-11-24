@@ -10,35 +10,43 @@
 
 ## Usage
 ```
-  umbrellaint.py --dim <#> [options] [-h]
+  umbrellaint --dim <#> [options] [-h]
 ```
 
-## Requirements
-*Python 3.7* \
-Python 2 compatible (no warranty)
+## Installation
+```
+  pip install git+https://github.com/boneta/UmbrellaIntegrator.git
+```
+### Requirements
+*Python 3.7* / Python 2 compatible (no warranty)
+
+A Fortran compiler (tested with *gfortran*)
 
 Packages:
   - NumPy
   - SciPy (only needed for 2D)
 
-Extremely fast functions written in Fortran are optionally available. To take advantage of them, a f2py module must be compiled once. Tested with gfortran.
-
-`python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran`
-
+### Manual Installation
+It can also be installed by cloning/downloading the source code from the GitHub repository.  
+Then, to take advantage of extremely fast functions written in Fortran, a f2py module must be compiled.
+```
+  git clone https://github.com/boneta/UmbrellaIntegrator.git
+  make -C UmbrellaIntegrator
+```
 
 ## Input format
 
 Currently supported fDynamo style files. Examples are provided.
 
-First line: Force Constant and Reference Distance \
-Rest of lines: Distances Sampled \
+First line: Force Constant and Reference Distance  
+Rest of lines: Distances Sampled  
 Default file naming: 1D: dat_1.# || 2D: dat_1.#.# dat_2.#.#
 
 
 ## Running options
-Built-in help (-h).\
-Only mandatory parameter is the dimension of the PMF: 1 or 2\
-Temperature (in Kelvin) and output units (kj/mol or kcal/mol) can be chosen. Default: 298.0K and kj/mol\
+Built-in help (-h).  
+Only mandatory parameter is the dimension of the PMF: 1 or 2  
+Temperature (in Kelvin) and output units (kj/mol or kcal/mol) can be chosen. Default: 298.0K and kj/mol  
 Relative location of the input files with '--path'
 
 #### 1 Dimension
@@ -52,19 +60,19 @@ Two working modes available:
  - *Incomplete grid* : Activated with '--igrid'. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into an equally spaced grid with '--idist' distance between points. The surface is only generated in areas containing input values. Recommended method if not restricted to a perfect rectangular result.
 
 #### Examples
-`umbrellaint.py --dim 1 --out pmf_1d.dat`\
+`umbrellaint.py --dim 1 --out pmf_1d.dat`  
 `umbrellaint.py --dim 1 --out pmf_1d.dat --path examples/1D --temp 298.15 --units kcal --bins 5000`
 
-`umbrellaint.py --dim 2 --out pmf_2d.dat`\
-`umbrellaint.py --dim 2 --out pmf_2d.dat --path ../examples/2D/ --temp 313 --grid 1.5`\
+`umbrellaint.py --dim 2 --out pmf_2d.dat`  
+`umbrellaint.py --dim 2 --out pmf_2d.dat --path ../examples/2D/ --temp 313 --grid 1.5`  
 `umbrellaint.py --dim 2 --temp 328. --igrid --idist 0.04`
 
 
 ## How to cite
-  > Boneta, S., _Umbrella Integrator_, 2020, https://github.com/boneta/UmbrellaIntegrator
+  > Boneta, S., _Umbrella Integrator_, 2021, https://github.com/boneta/UmbrellaIntegrator
 
 ## References
 Based on the _Umbrella Integration_ method developed by Johannes Kästner and Walter Thiel
 
-  > Kästner, J. & Thiel, W., _J Chem Phys._, 2005, 123(14), 144104, https://doi.org/10.1063/1.2052648 \
+  > Kästner, J. & Thiel, W., _J Chem Phys._, 2005, 123(14), 144104, https://doi.org/10.1063/1.2052648  
   > Kästner, J., _J Chem Phys._, 2009, 131(3), 034109, https://doi.org/10.1063/1.3175798

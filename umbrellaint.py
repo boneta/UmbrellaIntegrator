@@ -3,8 +3,8 @@
 
 # File: umbrellaint.py
 # Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.5.6
-# Last update : 13-07-2021
+# Version : 0.6.0
+# Last update : 24-11-2021
 # Author : Sergio Boneta
 
 r'''
@@ -44,7 +44,7 @@ Functions
 
 '''
 
-__version__ = '0.5.6'
+__version__ = '0.6.0'
 
 #######################################################################
 ##                                                                   ##
@@ -89,6 +89,7 @@ import numpy as np
 
 # fortranized key functions
 try:
+    sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
     import umbrellaint_fortran
     fortranization = True
 except:
