@@ -2,7 +2,7 @@
 !!         Umbrella Integrator - Fortranized Key Subroutines         !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! f2py compilation example:
-! python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran --opt='-Ofast'
+! python3 -m numpy.f2py -c umbrellaint_fortran.f90 -m umbrellaint_fortran --opt='-O3' --f90flags="-fopenmp" -lgomp
 
 !!  point_in  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine point_in(coord, grid, thr, result, n)
@@ -22,11 +22,12 @@ subroutine point_in(coord, grid, thr, result, n)
   integer              :: i
   real(8)              :: grid_dist(n)
 
-
   ! distance of grid to point
-  do i=1,n
-    grid_dist(i) = (grid(i,1)-coord(1))**2 + (grid(i,2)-coord(2))**2
-  enddo
+  !$OMP parallel do shared(grid_dist) private(i)
+    do i=1,n
+      grid_dist(i) = (grid(i,1)-coord(1))**2 + (grid(i,2)-coord(2))**2
+    enddo
+  !$OMP end parallel do
 
   ! result true if less than thr, else false
   result = minval(grid_dist) <= thr**2
@@ -60,6 +61,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
   real(8), parameter   :: TAU_SQRT=SQRT(8.D0*DATAN(1.D0))
 
   ! calculate gradient field of free energy over array grid [Kästner 2005 - Eq.7]
+  !$OMP parallel do shared(dA_bins) private(ib, i, rc, normal, derivate)
   do ib=1,n_bins
     rc = bins(ib)
     normal = normal_tot(rc)
@@ -70,6 +72,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
     ! sum all the derivatives on that grid point
     dA_bins(ib) = SUM(derivate)
   enddo
+  !$OMP end parallel do
 
 
   contains
@@ -153,6 +156,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
   real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
   ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  !$OMP parallel do shared(dA_grid) private(ig, jg, rc, normal, derivate, i, j)
   do ig=1,n_ig
     do jg=1,n_jg
       rc = grid(jg,ig,:)
@@ -172,6 +176,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
       enddo
     enddo
   enddo
+  !$OMP end parallel do
 
 
   contains
@@ -261,6 +266,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
   real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
   ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  !$OMP parallel do shared(dA_grid) private(ig, rc, normal, derivate, i)
   do ig=1,n_ig
     rc = grid(ig,:)
     normal = normal_tot(rc)
@@ -278,6 +284,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
       dA_grid(ig,:) = (/ impossible, impossible /)
     endif
   enddo
+  !$OMP end parallel do
 
 
   contains
