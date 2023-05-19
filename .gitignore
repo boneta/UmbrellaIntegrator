@@ -2,7 +2,9 @@
 *.pyc
 **/__pycache__/
 
+# examples / testing
 examples
+examples.tar.xz
 
 # distribution / packaging
 build/
