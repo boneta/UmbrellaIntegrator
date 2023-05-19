@@ -1,7 +1,6 @@
 # Umbrella Integrator
 
-![python](https://img.shields.io/badge/python-3.7-red.svg)
-![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)
+![python](https://img.shields.io/badge/python-3.8-red.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
@@ -18,7 +17,7 @@
   pip install git+https://github.com/boneta/UmbrellaIntegrator.git
 ```
 ### Requirements
-*Python 3.7* / Python 2 compatible (no warranty)
+*Python 3.8+*
 
 A Fortran compiler (tested with *gfortran*)
 

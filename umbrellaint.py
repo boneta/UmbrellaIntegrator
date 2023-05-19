@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# File: umbrellaint.py
-# Description : Umbrella integration of PMF calculations - 1D & 2D
-# Version : 0.6.0
-# Last update : 24-11-2021
-# Author : Sergio Boneta
-
 r'''
 
               ,·'´
@@ -44,7 +38,8 @@ Functions
 
 '''
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
+__author__ = 'Sergio Boneta'
 
 #######################################################################
 ##                                                                   ##
@@ -79,13 +74,14 @@ __version__ = '0.6.0'
 #######################################################################
 ##  DEPENDENCIES                                                     ##
 #######################################################################
-## Support: Python >2.7 and >3.7
+## Support: Python 3.8+
 
 import os
 import sys
 import argparse
 
 import numpy as np
+from numpy import ndarray
 
 # fortranized key functions
 try:
@@ -98,11 +94,9 @@ except:
 
 # scipy
 try:
-    from scipy import optimize
-    _scipy = True
+    from scipy import optimize as scipy_optimize
 except ImportError:
-    _scipy = False
-
+    scipy_optimize = None
 
 #######################################################################
 ##  CONSTANTS                                                        ##
@@ -135,7 +129,13 @@ kB = _R * 0.001                   # kJ * K-1 * mol-1
 #######################################################################
 
 ##  Read 1D Data  #####################################################
-def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printread=True):
+def read_dynamo_1D(
+        directory: str,
+        name: str = 'dat_1',
+        equilibration: int = 0,
+        minsteps: int = 0,
+        printread: bool = True
+        ) -> tuple:
     '''
         Read 1D data from fDynamo files into arrays
 
@@ -143,14 +143,14 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printre
         ----------
         directory : str
             path to the files
-        name : str
-            prefix of files (def: 'dat_x')
-        equilibration : int
+        name : str, optional
+            prefix of files (def: 'dat_1')
+        equilibration : int, optional
             number of steps considered equilibration and excluded (def: 0)
-        minsteps : int
+        minsteps : int, optional
             minimum number of steps to be taken in consideration (def: 0)
-        printread : bool
-            print file names while reading
+        printread : bool, optional
+            print file names while reading (def: True)
 
         Returns
         -------
@@ -175,7 +175,8 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printre
     # get 'dat_*' file lists
     files = os.listdir(directory)
     coor1 = [ i for i in files if name in i ]
-    if len(coor1) == 0: raise NameError('No {}.* files found on the specified path'.format(name))
+    if len(coor1) == 0:
+        raise NameError(f"No {name}.* files found on the specified path")
     coor1.sort()
 
     # number of windows
@@ -210,7 +211,8 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printre
             removef.append(i)
             continue
         # print progress
-        if printread: sys.stdout.write("{:s}  -  {:d}\n".format(fx, a_N[i]))
+        if printread:
+            sys.stdout.write(f"{fx:s}  -  {a_N[i]:d}\n")
 
     # delete empty files
     if removef:
@@ -222,7 +224,8 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printre
         a_N    = np.delete(a_N, removef)
 
     # check if any suitable data left
-    if n_i == 0: raise ValueError('No suitable files found')
+    if n_i == 0:
+        raise ValueError('No suitable files found')
 
     # build data matrix and get limits
     limits = np.zeros((2), dtype=float)
@@ -232,17 +235,22 @@ def read_dynamo_1D(directory, name='dat_x', equilibration=0, minsteps=0, printre
     # a_fc = a_fc * 0.5
 
     # print information
-    sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i))
-    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(a_N)))
-    sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n\n'.format(limits[0],limits[1]))
+    sys.stdout.write(f"\n# No Windows:  {n_i:d}\n")
+    sys.stdout.write(f"# No Samples (Avg):  {np.mean(a_N):<10.2f}\n")
+    sys.stdout.write(f"# x_min: {limits[0]:>7.3f}    x_max: {limits[1]:>7.3f} \n\n")
     sys.stdout.flush()
 
     # return results
     return n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits
 
 ##  Read 2D Data  #####################################################
-def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
-                    equilibration=0, printread=True):
+def read_dynamo_2D(
+        directory: str,
+        name1: str = 'dat_1',
+        name2: str = 'dat_2',
+        equilibration: int = 0,
+        printread: bool = True
+        ) -> tuple:
     '''
         Read 2D data from fDynamo files into matrices
 
@@ -250,14 +258,14 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
         ----------
         directory : str
             path to the files
-        name1 : str
-            prefix of x files (def: 'dat_x')
-        name2 : str
-            prefix of y files (def: 'dat_y')
-        equilibration : int
+        name1 : str, optional
+            prefix of x files (def: 'dat_1')
+        name2 : str, optional
+            prefix of y files (def: 'dat_2')
+        equilibration : int, optional
             number of steps considered equilibration and excluded (def: 0)
-        printread : bool
-            print file names while reading
+        printread : bool, optional
+            print file names while reading (def: True)
 
         Returns
         -------
@@ -286,8 +294,10 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     files = os.listdir(directory)
     coor1 = [ i for i in files if name1 in i ]
     coor2 = [ i for i in files if name2 in i ]
-    if len(coor1) == 0 or len(coor2) == 0: raise NameError('No {}.*/{}.* files found on the specified path'.format(name1,name2))
-    if len(coor1) != len(coor2): raise NameError('Different number of {}.* and {}.* files'.format(name1,name2))
+    if len(coor1) == 0 or len(coor2) == 0:
+        raise NameError(f"No {name1}.*/{name2}.* files found on the specified path")
+    if len(coor1) != len(coor2):
+        raise NameError(f"Different number of {name1}.* and {name2}.* files")
     coor1.sort()
     coor2.sort()
 
@@ -308,7 +318,7 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     for fx, fy in zip(coor1, coor2):
         # check if empty file
         if os.stat(os.path.join(directory, fx)).st_size == 0 or os.stat(os.path.join(directory, fy)).st_size == 0:
-            raise ValueError('Empty file found: {} {}'.format(fx,fy))
+            raise ValueError(f"Empty file found: {fx} {fy}")
         # set i,j and open/read files
         name, i, j = fx.split('.')
         i, j = int(i), int(j)
@@ -327,7 +337,8 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
         m_covar[j,i] = np.cov(datx, daty)
         m_N[j,i] = len(datx)
         # print progress
-        if printread: sys.stdout.write("{:s}  {:s}  -  {:d}\n".format(fx, fy, m_N[j,i]))
+        if printread:
+            sys.stdout.write(f"{fx:s}  {fy:s}  -  {m_N[j,i]:d}\n")
 
     # get limits
     limits = np.zeros((2,2), dtype=float)
@@ -338,19 +349,25 @@ def read_dynamo_2D(directory, name1='dat_x', name2='dat_y',
     # m_fc = m_fc * 0.5
 
     # print information
-    sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i*n_j))
-    sys.stdout.write("# Surface dimensions:  {:d} x {:d}\n".format(n_i, n_j))
-    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(m_N)))
-    sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n'
-                        '# y_min: {:>7.3f}    y_max: {:>7.3f} \n\n'.format(limits[0,0],limits[0,1],limits[1,0],limits[1,1]))
+    sys.stdout.write(f"\n# No Windows:  {n_i*n_j:d}\n")
+    sys.stdout.write(f"# Surface dimensions:  {n_i:d} x {n_j:d}\n")
+    sys.stdout.write(f"# No Samples (Avg):  {np.mean(m_N):<10.2f}\n")
+    sys.stdout.write(f"# x_min: {limits[0,0]:>7.3f}    x_max: {limits[0,1]:>7.3f} \n"
+                     f"# y_min: {limits[1,0]:>7.3f}    y_max: {limits[1,1]:>7.3f} \n\n")
     sys.stdout.flush()
 
     # return results
     return n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits
 
 ##  Read 2D Data - Incomplete Grid  ###################################
-def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
-                          equilibration=0, minsteps=0, printread=True):
+def read_dynamo_2D_igrid(
+        directory: str,
+        name1: str = 'dat_1',
+        name2: str = 'dat_2',
+        equilibration: int = 0,
+        minsteps: int = 0,
+        printread: bool = True
+        ) -> tuple:
     '''
         Read 2D data from fDynamo files into arrays
 
@@ -358,16 +375,16 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
         ----------
         directory : str
             path to the files
-        name1 : str
-            prefix of x files (def: 'dat_x')
-        name2 : str
-            prefix of y files (def: 'dat_y')
-        equilibration : int
+        name1 : str, optional
+            prefix of x files (def: 'dat_1')
+        name2 : str, optional
+            prefix of y files (def: 'dat_2')
+        equilibration : int, optional
             number of steps considered equilibration and excluded (def: 0)
-        minsteps : int
+        minsteps : int, optional
             minimum number of steps to be taken in consideration (def: 0)
-        printread : bool
-            print file names while reading
+        printread : bool, optional
+            print file names while reading (def: True)
 
         Returns
         -------
@@ -392,8 +409,10 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
     files = os.listdir(directory)
     coor1 = [ i for i in files if name1 in i ]
     coor2 = [ i for i in files if name2 in i ]
-    if len(coor1) == 0 or len(coor2) == 0: raise NameError('No {}.*/{}.* files found on the specified path'.format(name1,name2))
-    if len(coor1) != len(coor2): raise NameError('Different number of {}.* and {}.* files'.format(name1,name2))
+    if len(coor1) == 0 or len(coor2) == 0:
+        raise NameError(f"No {name1}.*/{name2}.* files found on the specified path")
+    if len(coor1) != len(coor2):
+        raise NameError(f"Different number of {name1}.* and {name2}.* files")
     coor1.sort()
     coor2.sort()
 
@@ -436,7 +455,8 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
             removef.append(i)
             continue
         # print progress
-        if printread: sys.stdout.write("{:s}  {:s}  -  {:d}\n".format(fx, fy, a_N[i]))
+        if printread:
+            sys.stdout.write(f"{fx:s}  {fy:s}  -  {a_N[i]:d}\n")
 
     # delete empty files
     if removef:
@@ -448,7 +468,8 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
         a_N     = np.delete(a_N, removef, 0)
 
     # check if any suitable data left
-    if n_i == 0: raise ValueError('No suitable files found')
+    if n_i == 0:
+        raise ValueError("No suitable files found")
 
     # get limits
     limits = np.zeros((2,2), dtype=float)
@@ -459,18 +480,28 @@ def read_dynamo_2D_igrid(directory, name1='dat_x', name2='dat_y',
     # a_fc = a_fc * 0.5
 
     # print information
-    sys.stdout.write("\n# No Windows:  {:d}\n".format(n_i))
-    sys.stdout.write("# No Samples (Avg):  {:<10.2f}\n".format(np.mean(a_N)))
-    sys.stdout.write('# x_min: {:>7.3f}    x_max: {:>7.3f} \n'
-                        '# y_min: {:>7.3f}    y_max: {:>7.3f} \n\n'.format(limits[0,0],limits[0,1],limits[1,0],limits[1,1]))
+    sys.stdout.write(f"\n# No Windows:  {n_i:d}\n")
+    sys.stdout.write(f"# No Samples (Avg):  {np.mean(a_N):<10.2f}\n")
+    sys.stdout.write(f"# x_min: {limits[0,0]:>7.3f}    x_max: {limits[0,1]:>7.3f} \n"
+                     f"# y_min: {limits[1,0]:>7.3f}    y_max: {limits[1,1]:>7.3f} \n\n")
     sys.stdout.flush()
 
     # return results
     return a_fc, a_rc0, a_mean, a_covar, a_N, limits
 
 ##  Umbrella Integration 1D  ##########################################
-def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
-                             a_N, limits, temp=298., integrator='trapz'):
+def umbrella_integration_1D(
+        n_bins: int,
+        n_i: int,
+        a_fc: ndarray,
+        a_rc0: ndarray,
+        a_mean: ndarray,
+        a_std: ndarray,
+        a_N: ndarray,
+        limits: ndarray,
+        temp: float = 298.,
+        integrator:str = 'trapz'
+        ) -> tuple:
     '''
         Umbrella Integration algorithm for 1D
 
@@ -492,7 +523,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
             array of number of samples for each window
         limits : ndarray(2)
             array of minimum and maximum coordinates
-        temp : int, optional
+        temp : float, optional
             temperature (K) (def: 298.)
         integrator : {'trapz', 'simpson'}, optional
             integration algorithm (def: 'trapz')
@@ -509,7 +540,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
 
     # check integrator specification
     if integrator not in {'trapz', 'simpson'}:
-        raise NameError('Integrator not recognized')
+        raise NameError("Integrator not recognized")
 
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
@@ -537,7 +568,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
             return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
 
         # calculate derivatives of free energy over the bins [Kästner 2005 - Eq.7]
-        sys.stdout.write("# Calculating derivatives - {} bins \n".format(n_bins))
+        sys.stdout.write(f"# Calculating derivatives - {n_bins} bins \n")
         for ib in range(n_bins):
             rc = bins[ib]
             normal = normal_tot(rc)
@@ -546,7 +577,7 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
         return dA_bins
 
     if fortranization:
-        sys.stdout.write("# Calculating derivatives - {} bins - Fortranized\n".format(n_bins))
+        sys.stdout.write(f"# Calculating derivatives - {n_bins} bins - Fortranized\n")
         dA_bins = umbrellaint_fortran.ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta)
     else:
         dA_bins = derivate()
@@ -576,9 +607,20 @@ def umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std,
     return bins, dA_bins, A_bins
 
 ##  Umbrella Integration 2D  ##########################################
-def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
-                             m_covar, m_N, limits, temp=298.,
-                             integrator='trapz+mini', integrate=True):
+def umbrella_integration_2D(
+        grid_f: float,
+        n_i: int,
+        n_j: int,
+        m_fc: ndarray,
+        m_rc0: ndarray,
+        m_mean: ndarray,
+        m_covar: ndarray,
+        m_N: ndarray,
+        limits: ndarray,
+        temp: float = 298.,
+        integrator: str = 'trapz+mini',
+        integrate: bool = True
+        ) -> tuple:
     '''
         Umbrella Integration algorithm for 2D from matrices
 
@@ -624,7 +666,7 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
 
     # check integrator specification
     if integrator not in {'mini', 'trapz+mini', 'fourier'}:
-        raise NameError('Integrator not recognized')
+        raise NameError("Integrator not recognized")
 
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
@@ -684,11 +726,11 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
         def normal_tot(rc):
             return np.sum([m_N[j,i]*probability(rc,j,i) for i in range(n_i) for j in range(n_j)])
 
-        # # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
+        # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
         # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_jg) for i in range(n_ig)]).reshape(n_jg,n_ig)
 
         # calculate gradient field of free energy over grid [Kästner 2009 - Eq.11]
-        sys.stdout.write("# Calculating derivatives - Grid {} x {}\n".format(n_ig,n_jg))
+        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig} x {n_jg}\n")
         for jg in range(n_jg):
             for ig in range(n_ig):
                 rc = grid[jg,ig]
@@ -702,7 +744,7 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
         return dA_grid
 
     if fortranization:
-        sys.stdout.write("# Calculating derivatives - Grid {:d} x {:d} - Fortranized\n".format(n_ig,n_jg))
+        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig:d} x {n_jg:d} - Fortranized\n")
         dA_grid = umbrellaint_fortran.ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
     else:
         dA_grid = derivate()
@@ -719,7 +761,11 @@ def umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean,
     return grid, dA_grid, A_grid
 
 ##  Incomplete Grid Generator 2D  #####################################
-def igrid_gen(grid_d, a_coord, thr_close=1e-1):
+def igrid_gen(
+        grid_d: float,
+        a_coord: ndarray,
+        thr_close: float = 1e-1
+        ) -> ndarray:
     '''
         Incomplete grid generator in 2D
 
@@ -750,8 +796,7 @@ def igrid_gen(grid_d, a_coord, thr_close=1e-1):
         def point_in(rc):
             thr = thr_close**2        # threshold to consider close points
             coord_dist = (a_coord[:,0]-rc[0])**2 + (a_coord[:,1]-rc[1])**2
-            if min(coord_dist) < thr: return True
-            else: return False
+            return bool(min(coord_dist) < thr)
 
     # get limits
     limits_x = (np.min(a_coord[:,0]), np.max(a_coord[:,0]))
@@ -763,19 +808,19 @@ def igrid_gen(grid_d, a_coord, thr_close=1e-1):
     n_x = grid_x.shape[0]
     n_y = grid_y.shape[0]
 
+
     # grid building
-    grid = []
-    for j in range(n_y):
-        for i in range(n_x):
-            rc = grid_x[i], grid_y[j]
-            if point_in(rc): grid.append(rc)
+    grid = [[grid_x[i], grid_y[j]] for j in range(n_y) for i in range(n_x) if point_in([grid_x[i], grid_y[j]])]
     grid = np.asarray(grid)
 
     # return final grid
     return grid
 
 ##  Incomplete Grid Topology 2D  ######################################
-def igrid_topol(grid_d, grid):
+def igrid_topol(
+        grid_d: float,
+        grid: ndarray
+        ) -> tuple:
     '''
         Incomplete grid topology guessing
 
@@ -838,7 +883,11 @@ def igrid_topol(grid_d, grid):
     return grid_topol, grid_topol_d
 
 ##  Incomplete Grid Gradient 2D  ######################################
-def igrid_grad(A_grid, grid_topol, grid_topol_d):
+def igrid_grad(
+        A_grid: ndarray,
+        grid_topol: ndarray,
+        grid_topol_d: ndarray
+        ) -> ndarray:
     '''
         Incomplete grid topology gradient calculation
 
@@ -871,9 +920,18 @@ def igrid_grad(A_grid, grid_topol, grid_topol_d):
     return dgrid
 
 ##  Umbrella Integration 2D - Incomplete Grid #########################
-def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
-                                   a_N, limits, temp=298.,
-                                   thr_close=1e-1, integrate=True):
+def umbrella_integration_2D_igrid(
+        grid_d: float,
+        a_fc: ndarray,
+        a_rc0: ndarray,
+        a_mean: ndarray,
+        a_covar: ndarray,
+        a_N: ndarray,
+        limits: ndarray,
+        temp: float = 298.,
+        thr_close: float = 1e-1,
+        integrate: bool = True
+        ) -> tuple:
     '''
         Umbrella Integration algorithm for 2D from arrays to a incomplete grid
 
@@ -946,7 +1004,7 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
             return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
 
         # calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
-        sys.stdout.write("# Calculating derivatives - Incomplete Grid ({:d})\n".format(n_ig))
+        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d})\n")
         for ig in range(n_ig):
             rc = grid[ig]
             normal = normal_tot(rc)
@@ -962,7 +1020,7 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
         return dA_grid
 
     if fortranization:
-        sys.stdout.write("# Calculating derivatives - Incomplete Grid ({:d}) - Fortranized\n".format(n_ig))
+        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d}) - Fortranized\n")
         dA_grid = umbrellaint_fortran.ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
     else:
         dA_grid = derivate_igrid()
@@ -984,7 +1042,11 @@ def umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar,
     return grid, dA_grid, A_grid
 
 ##  Integrate 2D surface  #############################################
-def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
+def integration_2D(
+        grid: ndarray,
+        dA_grid: ndarray,
+        integrator: str
+        ) -> ndarray:
     '''
         Integration of a 2D surface from its gradient
 
@@ -1028,7 +1090,7 @@ def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
         sys.stdout.write("# Integrating             - Real Space Grid Mini \n\n")
 
         # L-BFGS-B minimization of sumation of square of gradient differences
-        mini_result = optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+        mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
         if not mini_result.success:
             sys.stdout.write("WARNING: Minimization could not converge\n\n")
         A_grid = mini_result.x.reshape(n_jg,n_ig)
@@ -1079,7 +1141,7 @@ def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
                    trapz_corner('UpRight',  'x')  + trapz_corner('UpRight',  'y') ) / 8
 
         # L-BFGS-B minimization of sumation of square of gradient differences
-        mini_result = optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+        mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
         if not mini_result.success:
             sys.stdout.write("WARNING: Minimization could not converge\n\n")
         A_grid = mini_result.x.reshape(n_jg,n_ig)
@@ -1088,6 +1150,10 @@ def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
     # FIXME: make f** Fourier work properly
     elif integrator == 'fourier':
         sys.stdout.write("# Integrating             - Fourier Series\n")
+
+        raise NotImplementedError("Fourier series integration not implemented yet")
+
+        fourier_f = 2.0
 
         # Fourier coefficient matrix (n_jg, n_ig, 2)|(n_jg, n_ig) / (M,N,2)|(M,N)
         a = np.zeros_like(A_grid)
@@ -1180,7 +1246,11 @@ def integration_2D(grid, dA_grid, integrator, fourier_f=2.0):
     return A_grid
 
 ##  Integrate 2D surface - Incomplete Grid ############################
-def integration_2D_igrid(grid_d, grid, dA_grid):
+def integration_2D_igrid(
+        grid_d: float,
+        grid: ndarray,
+        dA_grid: ndarray
+        ) -> ndarray:
     '''
         Integration of a incomplete 2D surface from its gradient
 
@@ -1224,7 +1294,7 @@ def integration_2D_igrid(grid_d, grid, dA_grid):
     ## real-space grid minimization
     sys.stdout.write("# Integrating             - Real Space Grid Mini \n\n")
     # L-BFGS-B minimization of sumation of square of gradient differences
-    mini_result = optimize.minimize(D_tot, A_grid, method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+    mini_result = scipy_optimize.minimize(D_tot, A_grid, method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
     if not mini_result.success:
         sys.stdout.write("WARNING: Minimization could not converge\n\n")
     A_grid = mini_result.x
@@ -1236,8 +1306,15 @@ def integration_2D_igrid(grid_d, grid, dA_grid):
     return A_grid
 
 ##  Write 1D Results  #################################################
-def write_1D(file, bins, A_bins, temp='UNKNOWN', integrator='UNKNOWN',
-              samples='UNKNOWN', units='UNKNOWN'):
+def write_1D(
+        file: str,
+        bins: ndarray,
+        A_bins: ndarray,
+        temp: str = 'UNKNOWN',
+        integrator: str = 'UNKNOWN',
+        samples: str = 'UNKNOWN',
+        units: str = 'UNKNOWN'
+        ) -> None:
     '''
         Write 1D result into file
 
@@ -1262,19 +1339,26 @@ def write_1D(file, bins, A_bins, temp='UNKNOWN', integrator='UNKNOWN',
     with open(file, 'w') as f:
         # general info
         f.write("## UMBRELLA INTEGRATED\n")
-        f.write("# No bins: {}\n".format(len(bins)))
-        f.write("# Integrator: {}\n".format(integrator))
-        f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# No Samples (Avg): {}\n".format(samples))
-        f.write("# Units: {}/mol\n#\n".format(units))
+        f.write(f"# No bins: {len(bins)}\n")
+        f.write(f"# Integrator: {integrator}\n")
+        f.write(f"# Temperature (K): {temp}\n")
+        f.write(f"# No Samples (Avg): {samples}\n")
+        f.write(f"# Units: {units}/mol\n#\n")
         f.write("#  ReactionCoord               PMF\n")
         # data
         for rc, A in zip(bins, A_bins):
             f.write("{:16.9f}  {:16.9f}\n".format(rc, A))
 
 ##  Write 2D Results  #################################################
-def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
-              samples='UNKNOWN', units='UNKNOWN'):
+def write_2D(
+        file: str,
+        grid: ndarray,
+        A_grid: ndarray,
+        temp: str = 'UNKNOWN',
+        integrator: str = 'UNKNOWN',
+        samples: str = 'UNKNOWN',
+        units: str = 'UNKNOWN'
+        ) -> None:
     '''
         Write 2D result into file
 
@@ -1300,11 +1384,11 @@ def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
     with open(file, 'w') as f:
         # general info
         f.write("## UMBRELLA INTEGRATED\n")
-        f.write("# Grid: {} x {}\n".format(n_i,n_j))
-        f.write("# Integrator: {}\n".format(integrator))
-        f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# No Samples (Avg): {}\n".format(samples))
-        f.write("# Units: {}/mol\n#\n".format(units))
+        f.write(f"# Grid: {n_i} x {n_j}\n")
+        f.write(f"# Integrator: {integrator}\n")
+        f.write(f"# Temperature (K): {temp}\n")
+        f.write(f"# No Samples (Avg): {samples}\n")
+        f.write(f"# Units: {units}/mol\n#\n")
         f.write("#              x                 y               PMF\n")
         # data
         for i in range(n_i):
@@ -1313,8 +1397,15 @@ def write_2D(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
             f.write("\n")
 
 ##  Write 2D Results - Incomplete Grid  ###############################
-def write_2D_igrid(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
-                    samples='UNKNOWN', units='UNKNOWN'):
+def write_2D_igrid(
+        file: str,
+        grid: ndarray,
+        A_grid: ndarray,
+        temp: str = 'UNKNOWN',
+        integrator: str = 'UNKNOWN',
+        samples: str = 'UNKNOWN',
+        units: str = 'UNKNOWN'
+        ) -> None:
     '''
         Write 2D result into file from a incomplete grid
 
@@ -1344,10 +1435,10 @@ def write_2D_igrid(file, grid, A_grid, temp='UNKNOWN', integrator='UNKNOWN',
         # general info
         f.write("## UMBRELLA INTEGRATED\n")
         f.write("# Grid: Incomplete Grid\n")
-        f.write("# Integrator: {}\n".format(integrator))
-        f.write("# Temperature (K): {}\n".format(temp))
-        f.write("# No Samples (Avg): {}\n".format(samples))
-        f.write("# Units: {}/mol\n#\n".format(units))
+        f.write(f"# Integrator: {integrator}\n")
+        f.write(f"# Temperature (K): {temp}\n")
+        f.write(f"# No Samples (Avg): {samples}\n")
+        f.write(f"# Units: {units}/mol\n#\n")
         f.write("#              x                 y               PMF\n")
         # data
         for i in range(data.shape[0]):
@@ -1367,7 +1458,7 @@ def main():
     parser = argparse.ArgumentParser(description=' -- Umbrella Integration of PMF calculations - 1D & 2D --\n',
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-v', '--version', action='version',
-                        version='Umbrella Integrator v{} / GPL'.format(__version__))
+                        version='Umbrella Integrator v{} / GPLv3'.format(__version__))
     parser.add_argument('-d', '--dim', metavar='X', type=int,
                         choices=[1,2], required=True,
                         help='dimension of PMF [1 / 2]')
@@ -1376,8 +1467,8 @@ def main():
                         default='PMF-UI.dat')
     parser.add_argument('-p', '--path', type=str,
                         help='files path (def: current dir)\n'+
-                             ' 1D   dat_x.#\n'+
-                             ' 2D   dat_x.#.#  dat_y.#.#',
+                             ' 1D   dat_1.#\n'+
+                             ' 2D   dat_1.#.#  dat_2.#.#',
                         default='.')
     parser.add_argument('-t', '--temp', type=float,
                         help='temperature in Kelvin (def: 298.)',
@@ -1418,7 +1509,9 @@ def main():
                         help='basename of the input files for x and y\n'+
                              'coordinates (def: dat_1 dat_2)\n',
                         default=['dat_1', 'dat_2'])
-    parser.add_argument('--nofortran', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--verbose', action='store_true',
+                        help='print additional information (i.e. reading files)\n')
+    parser.add_argument('--nofortran', action='store_false', help=argparse.SUPPRESS)
 
     # assignation of input variables
     args = parser.parse_args()
@@ -1432,26 +1525,26 @@ def main():
     grid_d       = args.dist
     rectangular  = args.rectangular
     grid_f       = args.grid
-    name1        = args.names[0]
-    name2        = args.names[1]
+    name1, name2 = args.names
+    verbose      = args.verbose
+    fortranization = args.nofortran
     if args.int is None:
-        if dimension == 1: integrator = 'trapz'
-        elif dimension == 2: integrator = 'trapz+mini'
+        integrator = 'trapz+mini' if dimension == 2 else 'trapz'
     else:
         integrator = args.int
-    if args.nofortran: fortranization = False
+
 
     ##  GENERAL INFO  #################################################
     sys.stdout.write("## UMBRELLA INTEGRATION ##\n")
-    sys.stdout.write("# Name: {}\n".format(outfile))
-    sys.stdout.write("# Path: {}\n".format(directory))
-    sys.stdout.write("# Temperature (K): {:.2f}\n".format(temperature))
-    sys.stdout.write("# Dimension: {}\n\n".format(dimension))
+    sys.stdout.write(f"# Name: {outfile}\n")
+    sys.stdout.write(f"# Path: {directory}\n")
+    sys.stdout.write(f"# Temperature (K): {temperature:.2f}\n")
+    sys.stdout.write(f"# Dimension: {dimension}\n\n")
 
     ##  1D  ###########################################################
     if dimension == 1:
         ## read input
-        n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration, minsteps, True)
+        n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration, minsteps, verbose)
         ## umbrella integration
         bins, dG, G = umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits, temp=temperature, integrator=integrator)
         ## write output
@@ -1460,12 +1553,12 @@ def main():
         write_1D(outfile, bins, G, temp=temperature, integrator=integrator, samples=np.mean(a_N), units=units)
 
     ##  2D - Rectangular Grid #########################################
-    if dimension == 2 and rectangular:
+    elif dimension == 2 and rectangular:
         ## check scipy
-        if not _scipy:
-            raise ImportError('SciPy could not be imported')
+        if not scipy_optimize:
+            raise ImportError("SciPy could not be imported")
         ## read input
-        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration, True)
+        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration, verbose)
         ## umbrella integration
         grid, dG, G = umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator)
         ## write output
@@ -1476,10 +1569,10 @@ def main():
     ##  2D - Incomplete Grid ##########################################
     elif dimension == 2:
         ## check scipy
-        if not _scipy:
-            raise ImportError('SciPy could not be imported')
+        if not scipy_optimize:
+            raise ImportError("SciPy could not be imported")
         ## read input
-        a_fc, a_rc0, a_mean, a_covar, a_N, limits = read_dynamo_2D_igrid(directory, name1, name2, equilibration, minsteps, True)
+        a_fc, a_rc0, a_mean, a_covar, a_N, limits = read_dynamo_2D_igrid(directory, name1, name2, equilibration, minsteps, verbose)
         ## umbrella integration
         grid, dG, G = umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar, a_N, limits, temp=temperature)
         ## write output
