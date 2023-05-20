@@ -76,9 +76,10 @@ __author__ = 'Sergio Boneta'
 #######################################################################
 ## Support: Python 3.8+
 
+import argparse
 import os
 import sys
-import argparse
+from glob import glob
 
 import numpy as np
 from numpy import ndarray
@@ -97,6 +98,7 @@ try:
     from scipy import optimize as scipy_optimize
 except ImportError:
     scipy_optimize = None
+
 
 #######################################################################
 ##  CONSTANTS                                                        ##
@@ -173,8 +175,7 @@ def read_dynamo_1D(
     sys.stdout.write("# Reading input files\n")
 
     # get 'dat_*' file lists
-    files = os.listdir(directory)
-    coor1 = [ i for i in files if name in i ]
+    coor1 = glob(os.path.join(directory, f"{name}.*"))
     if len(coor1) == 0:
         raise NameError(f"No {name}.* files found on the specified path")
     coor1.sort()
@@ -191,13 +192,13 @@ def read_dynamo_1D(
     removef = []                                                       # files to remove
 
     # read 'dat_*' files
-    for fx, i in zip(coor1, range(n_i)):
+    for i, fx in enumerate(coor1):
         # check if empty file
-        if os.stat(os.path.join(directory, fx)).st_size == 0:
+        if os.stat(fx).st_size == 0:
             removef.append(i)
             continue
         # open/read file
-        datx = open(os.path.join(directory, fx)).readlines()
+        datx = open(fx).readlines()
         # force and initial distance
         a_fc[i], a_rc0[i] = datx.pop(0).split()
         # convert to numpy, ignoring equilibration part
@@ -289,11 +290,9 @@ def read_dynamo_2D(
 
     sys.stdout.write("# Reading input files\n")
 
-
     # get 'dat_*' file lists
-    files = os.listdir(directory)
-    coor1 = [ i for i in files if name1 in i ]
-    coor2 = [ i for i in files if name2 in i ]
+    coor1 = glob(os.path.join(directory, f"{name1}.*"))
+    coor2 = glob(os.path.join(directory, f"{name2}.*"))
     if len(coor1) == 0 or len(coor2) == 0:
         raise NameError(f"No {name1}.*/{name2}.* files found on the specified path")
     if len(coor1) != len(coor2):
@@ -302,7 +301,8 @@ def read_dynamo_2D(
     coor2.sort()
 
     # number of windows on every axis
-    name, n_i, n_j = coor1[-1].split('.')
+    name, n_i, n_j = os.path.basename(coor1[-1]).split('.')
+    # name, n_i, n_j = coor1[-1].split('.')
     n_i = int(n_i) + 1
     n_j = int(n_j) + 1
 
@@ -317,13 +317,13 @@ def read_dynamo_2D(
     line0 = np.zeros((2,2), dtype=float)
     for fx, fy in zip(coor1, coor2):
         # check if empty file
-        if os.stat(os.path.join(directory, fx)).st_size == 0 or os.stat(os.path.join(directory, fy)).st_size == 0:
+        if os.stat(fx).st_size == 0 or os.stat(fy).st_size == 0:
             raise ValueError(f"Empty file found: {fx} {fy}")
         # set i,j and open/read files
-        name, i, j = fx.split('.')
+        name, i, j = os.path.basename(fx).split('.')
         i, j = int(i), int(j)
-        datx = open(os.path.join(directory, fx)).readlines()
-        daty = open(os.path.join(directory, fy)).readlines()
+        datx = open(fx).readlines()
+        daty = open(fy).readlines()
         # force matrix and initial distance from line0
         line0[0], line0[1] = datx.pop(0).split(), daty.pop(0).split()
         m_fc[j,i] = np.diagflat(line0[:,0])
@@ -404,11 +404,9 @@ def read_dynamo_2D_igrid(
 
     sys.stdout.write("# Reading input files\n")
 
-
     # get 'dat_*' file lists
-    files = os.listdir(directory)
-    coor1 = [ i for i in files if name1 in i ]
-    coor2 = [ i for i in files if name2 in i ]
+    coor1 = glob(os.path.join(directory, f"{name1}.*"))
+    coor2 = glob(os.path.join(directory, f"{name2}.*"))
     if len(coor1) == 0 or len(coor2) == 0:
         raise NameError(f"No {name1}.*/{name2}.* files found on the specified path")
     if len(coor1) != len(coor2):
@@ -427,17 +425,16 @@ def read_dynamo_2D_igrid(
     a_N     = np.zeros((n_i), dtype=int)                               # number of samples
     removef = []                                                       # files to remove
 
-
     # read 'dat_*' files
     line0 = np.zeros((2,2), dtype=float)
-    for fx, fy, i in zip(coor1, coor2, range(n_i)):
+    for i, (fx, fy) in enumerate(zip(coor1, coor2)):
         # check if empty file
-        if os.stat(os.path.join(directory, fx)).st_size == 0 or os.stat(os.path.join(directory, fy)).st_size == 0:
+        if os.stat(fx).st_size == 0 or os.stat(fy).st_size == 0:
             removef.append(i)
             continue
         # open/read files
-        datx = open(os.path.join(directory, fx)).readlines()
-        daty = open(os.path.join(directory, fy)).readlines()
+        datx = open(fx).readlines()
+        daty = open(fy).readlines()
         # force matrix and initial distance from line0
         line0[0], line0[1] = datx.pop(0).split(), daty.pop(0).split()
         a_fc[i] = np.diagflat(line0[:,0])
