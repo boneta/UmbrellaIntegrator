@@ -497,7 +497,7 @@ def umbrella_integration_1D(
         a_N: ndarray,
         limits: ndarray,
         temp: float = 298.,
-        integrator:str = 'trapz'
+        integrator:str = 'simpson'
         ) -> tuple:
     '''
         Umbrella Integration algorithm for 1D
@@ -522,8 +522,8 @@ def umbrella_integration_1D(
             array of minimum and maximum coordinates
         temp : float, optional
             temperature (K) (def: 298.)
-        integrator : {'trapz', 'simpson'}, optional
-            integration algorithm (def: 'trapz')
+        integrator : {trapz, simpson}, optional
+            integration algorithm (def: 'simpson')
 
         Returns
         -------
@@ -537,7 +537,7 @@ def umbrella_integration_1D(
 
     # check integrator specification
     if integrator not in {'trapz', 'simpson'}:
-        raise NameError("Integrator not recognized")
+        raise NameError(f"Integrator '{integrator}' not recognized")
 
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
@@ -615,7 +615,7 @@ def umbrella_integration_2D(
         m_N: ndarray,
         limits: ndarray,
         temp: float = 298.,
-        integrator: str = 'trapz+mini',
+        integrator: str = 'simpson+mini',
         integrate: bool = True
         ) -> tuple:
     '''
@@ -644,8 +644,8 @@ def umbrella_integration_2D(
             matrix of minimum and maximum coordinates
         temp : float, optional
             temperature (K) (def: 298.)
-        integrator : {'mini','trapz+mini', 'fourier'}, optional
-            integration algorithm (def: 'trapz+mini')
+        integrator : {trapz, simpson, trapz+mini, simpson+mini, fourier}, optional
+            integration algorithm (default: 'simpson+mini')
         integrate : bool, optional
             perform the surface integration (def: True)
             if False, only the free energy derivatives are
@@ -660,10 +660,6 @@ def umbrella_integration_2D(
         A_grid : ndarray(grid_f*n_j,grid_f*n_i)
             matrix of integrated free energy
     '''
-
-    # check integrator specification
-    if integrator not in {'mini', 'trapz+mini', 'fourier'}:
-        raise NameError("Integrator not recognized")
 
     # initial definitions
     sys.stdout.write("## Umbrella Integration\n")
@@ -1042,7 +1038,7 @@ def umbrella_integration_2D_igrid(
 def integration_2D(
         grid: ndarray,
         dA_grid: ndarray,
-        integrator: str
+        integrator: str = 'simpson+mini'
         ) -> ndarray:
     '''
         Integration of a 2D surface from its gradient
@@ -1053,8 +1049,8 @@ def integration_2D(
             matrix of grid coordinates
         dA_grid : ndarray(grid_f*n_j,grid_f*n_i,2)
             matrix of free energy derivatives
-        integrator : {'mini','trapz+mini','fourier'}
-            integration algorithm
+        integrator : {trapz, simpson, trapz+mini, simpson+mini, fourier}, optional
+            integration algorithm (default: 'simpson+mini')
 
         Returns
         -------
@@ -1062,6 +1058,10 @@ def integration_2D(
             matrix of integrated free energy,
             minimum value set to zero
     '''
+
+    # check integrator
+    if integrator not in {'trapz', 'simpson', 'trapz+mini', 'simpson+mini', 'fourier'}:
+        raise ValueError(f"Integrator '{integrator}' not recognized")
 
     ## grid related definitions
     n_ig = grid.shape[1]
@@ -1078,69 +1078,50 @@ def integration_2D(
         dF = np.stack((dFx,dFy), axis=-1)
         return np.sum((dA_grid - dF)**2) / n_grid
 
+    ## composite trapezoidal rule integration
+    if 'trapz' in integrator:
+        sys.stdout.write("# Integrating             - Trapezoidal ")
+        for i in range(n_ig):
+            for j in range(n_jg):
+                if i == 0 and j == 0:
+                    A_grid[j, i] = 0  # corner point to zero
+                elif i == 0:
+                    A_grid[j, i] = A_grid[j-1, i] + (dA_grid[j-1, i, 1] + dA_grid[j, i, 1]) * dy / 2
+                elif j == 0:
+                    A_grid[j, i] = A_grid[j, i-1] + (dA_grid[j, i-1, 0] + dA_grid[j, i, 0]) * dx / 2
+                else:
+                    A_grid[j, i] = A_grid[j, i-1] \
+                                   + (dA_grid[j, i-1, 0] + dA_grid[j, i, 0]) * dx / 2 \
+                                   + (dA_grid[j-1, i, 1] + dA_grid[j, i, 1]) * dy / 2
+    
+    ## Simpson's rule integration
+    elif 'simpson' in integrator:
+        sys.stdout.write("# Integrating             - Simpson's rule ")
+        for j in range(n_jg):
+            for i in range(n_ig):
+                if i == 0 and j == 0:
+                    A_grid[j, i] = 0  # corner point to zero
+                elif i == 0:
+                    A_grid[j, i] = A_grid[j-1, i] + (dA_grid[j-1, i, 1] + dA_grid[j, i, 1]) * dy / 2
+                elif j == 0:
+                    A_grid[j, i] = A_grid[j, i-1] + (dA_grid[j, i-1, 0] + dA_grid[j, i, 0]) * dx / 2
+                else:
+                    A_grid[j, i] = A_grid[j-1, i-1] \
+                                   + (dA_grid[j-1, i-1, 0] + dA_grid[j-1, i, 0] + dA_grid[j, i-1, 0] + dA_grid[j, i, 0]) * dx / 6 \
+                                   + (dA_grid[j-1, i-1, 1] + dA_grid[j-1, i, 1] + dA_grid[j, i-1, 1] + dA_grid[j, i, 1]) * dy / 6
+
     ## real-space grid minimization
     # TODO: Global optimization methods -> Differential Evolution
     # FIXME: Now minimization of the squared difference of gradients
     #        per grid point instead of the derivative of difference
     #        of gradients (it matters?)
-    if integrator == 'mini':
-        sys.stdout.write("# Integrating             - Real Space Grid Mini \n\n")
-
+    if 'mini' in integrator:
+        sys.stdout.write("+ Real Space Grid Mini ")
+        sys.stdout.flush()
         # L-BFGS-B minimization of sumation of square of gradient differences
         mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
         if not mini_result.success:
-            sys.stdout.write("WARNING: Minimization could not converge\n\n")
-        A_grid = mini_result.x.reshape(n_jg,n_ig)
-
-    ## double composite trapezoidal rule integration + real-space grid minimization
-    elif integrator == 'trapz+mini':
-        sys.stdout.write("# Integrating             - Trapezoidal + Real Space Grid Mini\n\n")
-
-        # double trapezoidal from a corner
-        def trapz_corner(init, dir0):
-            A = np.zeros((n_jg,n_ig))
-            # parameter specification
-            if init == 'DownLeft':
-                i_range = list(range(1, n_ig))
-                j_range = list(range(1, n_jg))
-                fi, fj = -1, -1
-            elif init == 'UpLeft':
-                i_range = list(range(1, n_ig))
-                j_range = list(reversed(range(0, n_jg-1)))
-                fi, fj = -1, 1
-            elif init == 'DownRight':
-                i_range = list(reversed(range(0, n_ig-1)))
-                j_range = list(range(1, n_jg))
-                fi, fj = 1, -1
-            elif init == 'UpRight':
-                i_range = list(reversed(range(0, n_ig-1)))
-                j_range = list(reversed(range(0, n_jg-1)))
-                fi, fj = 1, 1
-            stp_x, stp_y = -1*fi*dx/2., -1*fj*dy/2.
-            # integration
-            if dir0 == 'x':
-                for i in i_range:
-                    A[0,i] = A[0,i+fi] + stp_x * (dA_grid[0,i+fi,0] + dA_grid[0,i,0])
-                for j in j_range:
-                    A[j,:] = A[j+fj,:] + stp_y * (dA_grid[j+fj,:,1] + dA_grid[j,:,1])
-            elif dir0 == 'y':
-                for j in j_range:
-                    A[j,0] = A[j+fj,0] + stp_y * (dA_grid[j+fj,0,1] + dA_grid[j,0,1])
-                for i in i_range:
-                    A[:,i] = A[:,i+fi] + stp_x * (dA_grid[:,i+fi,0] + dA_grid[:,i,0])
-            # relativized result
-            return A - np.min(A)
-
-        # calculate trapezoidal integrals from every corner and average -> inital guess
-        A_grid = ( trapz_corner('DownLeft', 'x')  + trapz_corner('DownLeft', 'y') +
-                   trapz_corner('UpLeft',   'x')  + trapz_corner('UpLeft',   'y') +
-                   trapz_corner('DownRight','x')  + trapz_corner('DownRight','y') +
-                   trapz_corner('UpRight',  'x')  + trapz_corner('UpRight',  'y') ) / 8
-
-        # L-BFGS-B minimization of sumation of square of gradient differences
-        mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
-        if not mini_result.success:
-            sys.stdout.write("WARNING: Minimization could not converge\n\n")
+            sys.stdout.write("\nWARNING: Minimization could not converge")
         A_grid = mini_result.x.reshape(n_jg,n_ig)
 
     ## expansion of the gradient in a Fourier series
@@ -1232,9 +1213,8 @@ def integration_2D(
 
         # A_grid = A_grid * x_lt_len / _tau
 
-    ## unknown integrator
-    else:
-        raise NameError('Unknown integrator')
+    # integration error
+    sys.stdout.write(f"\n# Integration error:        {D_tot(A_grid.ravel()):.2f}\n\n")
 
     # set minimum to zero
     A_grid = A_grid - np.min(A_grid)
@@ -1289,12 +1269,16 @@ def integration_2D_igrid(
         return np.sum((dA_grid - dF)**2) / n_ig
 
     ## real-space grid minimization
-    sys.stdout.write("# Integrating             - Real Space Grid Mini \n\n")
+    sys.stdout.write("# Integrating             - Real Space Grid Mini ")
+    sys.stdout.flush()
     # L-BFGS-B minimization of sumation of square of gradient differences
     mini_result = scipy_optimize.minimize(D_tot, A_grid, method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
     if not mini_result.success:
-        sys.stdout.write("WARNING: Minimization could not converge\n\n")
+        sys.stdout.write("\nWARNING: Minimization could not converge")
     A_grid = mini_result.x
+
+    # integration error
+    sys.stdout.write(f"\n# Integration error:        {D_tot(A_grid):.2f}\n\n")
 
     # set minimum to zero
     A_grid = A_grid - np.min(A_grid)
@@ -1478,16 +1462,21 @@ def main():
                         help='minimum number of steps to take a file (def: 0)',
                         default=0)
     parser.add_argument('-i', '--int', metavar='INT', type=str,
-                        choices=['trapz','simpson','mini','trapz+mini'],
+                        choices=['trapz','simpson','trapz+mini', 'simpson+mini'],
                         help='integration method for the derivatives\n'+
                              ' 1D\n'+
-                             "   'trapz'       - composite trapezoidal rule (def)\n"+
-                             "   'simpson'     - Simpson's rule\n"+
-                             ' 2D\n'+
-                             "   'mini'        - real space grid minimization\n"+
-                             "   'trapz+mini'  - trapezoidal integration as initial guess \n"+
+                             "  'trapz'        - composite trapezoidal rule\n"+
+                             "  'simpson'      - Simpson's rule (def)\n"+
+                             ' 2D (rectangular grid)\n'+
+                             "  'trapz'        - composite trapezoidal rule\n"+
+                             "  'simpson'      - Simpson's rule\n"+
+                             "  'trapz+mini'   - trapezoidal integration as initial guess \n"+
+                             "                   for real space grid minimization\n"+
+                             "  'simpson+mini' - Simpson's rule as initial guess \n"+
                              "                   for real space grid minimization (def)\n"+
-                             "   'fourier'     - expansion in a Fourier series (not working)")
+                             "  'fourier'      - expansion in a Fourier series (not implemented)\n"+
+                             ' 2D (incomplete grid)\n'+
+                             "  'mini'         - real space grid minimization (def)\n")
     parser.add_argument('-b', '--bins', type=int,
                         help='number of bins in 1D (def: 2000)',
                         default=2000)
