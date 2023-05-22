@@ -551,33 +551,25 @@ def umbrella_integration_1D(
 
     ## Derivatives ----------------------------------------------------
 
-    def derivate():
-        # normal probability [Kästner 2005 - Eq.5]
-        def probability(rc, i):
-            return np.exp(-0.5 * ((rc - a_mean[i])/a_std[i])**2) / (a_std[i] * tau_sqrt)
-
-        # local derivative of free energy [Kästner 2005 - Eq.6]
-        def dA(rc, i):
-            return (rc - a_mean[i]) / (beta * a_var[i])  -  a_fc[i] * (rc - a_rc0[i])
-
-        # normalization total [Kästner 2005 - Eq.8]
-        def normal_tot(rc):
-            return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
-
-        # calculate derivatives of free energy over the bins [Kästner 2005 - Eq.7]
-        sys.stdout.write(f"# Calculating derivatives - {n_bins} bins \n")
-        for ib in range(n_bins):
-            rc = bins[ib]
-            normal = normal_tot(rc)
-            dA_bins[ib] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
-
-        return dA_bins
-
     if fortranization:
         sys.stdout.write(f"# Calculating derivatives - {n_bins} bins - Fortranized\n")
         dA_bins = umbrellaint_fortran.ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta)
     else:
-        dA_bins = derivate()
+        sys.stdout.write(f"# Calculating derivatives - {n_bins} bins \n")
+        # normal probability [Kästner 2005 - Eq.5]
+        def probability(rc, i):
+            return np.exp(-0.5 * ((rc - a_mean[i])/a_std[i])**2) / (a_std[i] * tau_sqrt)
+        # local derivative of free energy [Kästner 2005 - Eq.6]
+        def dA(rc, i):
+            return (rc - a_mean[i]) / (beta * a_var[i])  -  a_fc[i] * (rc - a_rc0[i])
+        # normalization total [Kästner 2005 - Eq.8]
+        def normal_tot(rc):
+            return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
+        # calculate derivatives of free energy over the bins [Kästner 2005 - Eq.7]
+        for ib in range(n_bins):
+            rc = bins[ib]
+            normal = normal_tot(rc)
+            dA_bins[ib] = np.sum([ a_N[i]*probability(rc,i)/normal * dA(rc,i) for i in range(n_i) ])
 
     ## Integration ----------------------------------------------------
 
@@ -595,7 +587,6 @@ def umbrella_integration_1D(
         for b in range(1,n_bins-1):
             A_bins[b] = A_bins[b-1] + stp * (dA_bins[b-1] + 4*dA_bins[b] + dA_bins[b+1])
         A_bins[-1] = A_bins[-2] + db/2. * (dA_bins[-2] + dA_bins[-1])   # last point trapezoidal
-
 
     # set minimum to zero
     A_bins = A_bins - np.min(A_bins)
@@ -676,22 +667,6 @@ def umbrella_integration_2D(
     grid_y, dy = np.linspace(limits[1,0],limits[1,1],n_jg, retstep=True)
     # grid_x, dx = np.linspace(m_mean[0,0,0], m_mean[-1,-1,0], n_ig, retstep=True)
     # grid_y, dy = np.linspace(m_mean[0,0,1], m_mean[-1,-1,1], n_jg, retstep=True)
-    ## if Fourier: regular and even grid
-    if integrator=='fourier':
-        # FIXME: better difinition of even grid
-        dxy = min(dx, dy)  # space between points as minimum
-        # resize sides according
-        grid_x = np.arange(limits[0,0],limits[0,1],dxy)
-        grid_y = np.arange(limits[1,0],limits[1,1],dxy)
-        n_ig = grid_x.size
-        n_jg = grid_y.size
-        if n_ig%2 != 0:
-            n_ig -= 1
-            grid_x = grid_x[:-1]
-        if n_jg%2 != 0:
-            n_jg -= 1
-            grid_y = grid_y[:-1]
-
     # grid building
     grid = np.zeros((n_jg,n_ig,2))
     for j in range(n_jg):
@@ -700,30 +675,28 @@ def umbrella_integration_2D(
     # initialize gradient matrix
     dA_grid = np.zeros_like(grid)
 
-
     ## Derivatives ----------------------------------------------------
 
-    def derivate():
+    if fortranization:
+        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig:d} x {n_jg:d} - Fortranized\n")
+        dA_grid = umbrellaint_fortran.ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
+    else:
+        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig} x {n_jg}\n")
         # normal probability [Kästner 2009 - Eq.9]
         def probability(rc, j, i):
             diff = rc - m_mean[j,i]
             # return np.exp(-0.5 * np.matmul( diff, np.matmul(m_prec[j,i], diff) )) / (m_det_sqrt[j,i] * _tau)
             return np.exp( -0.5 * diff.dot(m_prec[j,i].dot(diff)) ) / (m_det_sqrt[j,i] * _tau)   # dot faster than matmul for small matrices
-
         # local derivative of free energy [Kästner 2009 - Eq.10]
         def dA(rc, j, i):
             # return  np.matmul((rc - m_mean[j,i])/beta, m_prec[j,i])  -  np.matmul((rc - m_rc0[j,i]), m_fc[j,i])
             return ((rc - m_mean[j,i])/beta).dot(m_prec[j,i])  -  (rc - m_rc0[j,i]).dot(m_fc[j,i])
-
         # normalization total [Kästner 2009 - Eq.11]
         def normal_tot(rc):
             return np.sum([m_N[j,i]*probability(rc,j,i) for i in range(n_i) for j in range(n_j)])
-
         # calculate normalization denominator for all the grid coordinates in advance --> same speed as on the fly calc, not worthy
         # def normal_denominator(): return np.asarray([ normal_tot(grid[j,i]) for j in range(n_jg) for i in range(n_ig)]).reshape(n_jg,n_ig)
-
         # calculate gradient field of free energy over grid [Kästner 2009 - Eq.11]
-        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig} x {n_jg}\n")
         for jg in range(n_jg):
             for ig in range(n_ig):
                 rc = grid[jg,ig]
@@ -733,15 +706,6 @@ def umbrella_integration_2D(
             sys.stdout.write("\r# [{:21s}] - {:>6.2f}%".format( "■"*int(21.*(jg+1)/n_jg), (jg+1)/n_jg*100)); sys.stdout.flush()
         sys.stdout.write("\n")
         sys.stdout.flush()
-
-        return dA_grid
-
-    if fortranization:
-        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig:d} x {n_jg:d} - Fortranized\n")
-        dA_grid = umbrellaint_fortran.ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
-    else:
-        dA_grid = derivate()
-
 
     ## Integration ----------------------------------------------------
     if integrate:
@@ -980,24 +944,24 @@ def umbrella_integration_2D_igrid(
 
     ## Derivatives ------------------------------------------------------
 
-    def derivate_igrid():
+    if fortranization:
+        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d}) - Fortranized\n")
+        dA_grid = umbrellaint_fortran.ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
+    else:
+        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d})\n")
         # normal probability [Kästner 2009 - Eq.9]
         def probability(rc, i):
             diff = rc - a_mean[i]
             # return np.exp(-0.5 * np.matmul( diff, np.matmul(a_prec[i], diff) )) / (a_det_sqrt[i] * _tau)
             return np.exp( -0.5 * diff.dot(a_prec[i].dot(diff)) ) / (a_det_sqrt[i] * _tau)   # dot faster than matmul for small matrices
-
         # local derivative of free energy [Kästner 2009 - Eq.10]
         def dA(rc, i):
             # return  np.matmul((rc - a_mean[i])/beta, a_prec[i])  -  np.matmul((rc - a_rc0[i]), a_fc[i])
             return  ((rc - a_mean[i])/beta).dot(a_prec[i])  -  (rc - a_rc0[i]).dot(a_fc[i])
-
         # normalization total [Kästner 2009 - Eq.11]
         def normal_tot(rc):
             return np.sum([a_N[i]*probability(rc,i) for i in range(n_i)])
-
         # calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
-        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d})\n")
         for ig in range(n_ig):
             rc = grid[ig]
             normal = normal_tot(rc)
@@ -1009,14 +973,6 @@ def umbrella_integration_2D_igrid(
             sys.stdout.write("\r# [{:21s}] - {:>6.2f}%".format( "■"*int(21.*(ig+1)/n_ig), (ig+1)/n_ig*100)); sys.stdout.flush()
         sys.stdout.write("\n")
         sys.stdout.flush()
-
-        return dA_grid
-
-    if fortranization:
-        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d}) - Fortranized\n")
-        dA_grid = umbrellaint_fortran.ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
-    else:
-        dA_grid = derivate_igrid()
 
     # remove 'impossible' values
     if impossible in dA_grid:
