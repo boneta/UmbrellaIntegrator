@@ -88,10 +88,9 @@ from numpy import ndarray
 try:
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
     import umbrellaint_fortran
-    fortranization = True
 except:
     sys.stdout.write("WARNING: Umbrella Integrator's fortran subroutines could not be imported\n" )
-    fortranization = False
+    umbrellaint_fortran = None
 
 # scipy
 try:
@@ -497,7 +496,8 @@ def umbrella_integration_1D(
         a_N: ndarray,
         limits: ndarray,
         temp: float = 298.,
-        integrator:str = 'simpson'
+        integrator: str = 'simpson',
+        fortranization: bool = True
         ) -> tuple:
     '''
         Umbrella Integration algorithm for 1D
@@ -524,6 +524,8 @@ def umbrella_integration_1D(
             temperature (K) (def: 298.)
         integrator : {trapz, simpson}, optional
             integration algorithm (def: 'simpson')
+        fortranization : bool, optional
+            use faster functions writen in Fortran (def: True)
 
         Returns
         -------
@@ -607,7 +609,8 @@ def umbrella_integration_2D(
         limits: ndarray,
         temp: float = 298.,
         integrator: str = 'simpson+mini',
-        integrate: bool = True
+        integrate: bool = True,
+        fortranization: bool = True
         ) -> tuple:
     '''
         Umbrella Integration algorithm for 2D from matrices
@@ -641,6 +644,8 @@ def umbrella_integration_2D(
             perform the surface integration (def: True)
             if False, only the free energy derivatives are
             calculated and A_grid returns as matrix of zeros
+        fortranization : bool, optional
+            use faster functions writen in Fortran (def: True)
 
         Returns
         -------
@@ -721,7 +726,8 @@ def umbrella_integration_2D(
 def igrid_gen(
         grid_d: float,
         a_coord: ndarray,
-        thr_close: float = 1e-1
+        thr_close: float = 1e-1,
+        fortranization: bool = True
         ) -> ndarray:
     '''
         Incomplete grid generator in 2D
@@ -737,7 +743,9 @@ def igrid_gen(
         thr_close : float, optional
             distance threshold to include grid points
             if are close to a data point (def: 1e-1)
-
+        fortranization : bool, optional
+            use faster functions writen in Fortran (def: True)
+            
         Returns
         -------
         grid : ndarray(n_ig,2)
@@ -887,7 +895,8 @@ def umbrella_integration_2D_igrid(
         limits: ndarray,
         temp: float = 298.,
         thr_close: float = 1e-1,
-        integrate: bool = True
+        integrate: bool = True,
+        fortranization: bool = True
         ) -> tuple:
     '''
         Umbrella Integration algorithm for 2D from arrays to a incomplete grid
@@ -917,6 +926,8 @@ def umbrella_integration_2D_igrid(
             perform the surface integration (def: True)
             if False, only the free energy derivatives are
             calculated and A_grid returns as array of zeros
+        fortranization : bool, optional
+            use faster functions writen in Fortran (def: True)
 
         Returns
         -------
@@ -936,11 +947,10 @@ def umbrella_integration_2D_igrid(
     a_det_sqrt = np.sqrt(np.linalg.det(a_covar[:]))       # sqrt of determinants of covar matrix
 
     ## Grid -----------------------------------------------------------
-    grid = igrid_gen(grid_d, a_mean, thr_close)
+    grid = igrid_gen(grid_d, a_mean, thr_close, fortranization)
     n_ig = grid.shape[0]
     # initialize gradient matrix
     dA_grid = np.zeros_like(grid)
-
 
     ## Derivatives ------------------------------------------------------
 
@@ -1469,7 +1479,7 @@ def main():
     grid_f       = args.grid
     name1, name2 = args.names
     verbose      = args.verbose
-    fortranization = args.nofortran
+    fortranization = args.nofortran if umbrellaint_fortran else False
     if args.int is None:
         integrator = 'trapz+mini' if dimension == 2 else 'trapz'
     else:
@@ -1488,7 +1498,7 @@ def main():
         ## read input
         n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits = read_dynamo_1D(directory, name1, equilibration, minsteps, verbose)
         ## umbrella integration
-        bins, dG, G = umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits, temp=temperature, integrator=integrator)
+        bins, dG, G = umbrella_integration_1D(n_bins, n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits, temp=temperature, integrator=integrator, fortranization=fortranization)
         ## write output
         if units.lower() == 'kcal': G = G * _J2cal
         sys.stdout.write("# Writing output file\n\n")
@@ -1502,7 +1512,7 @@ def main():
         ## read input
         n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration, verbose)
         ## umbrella integration
-        grid, dG, G = umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator)
+        grid, dG, G = umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator, fortranization=fortranization)
         ## write output
         if units.lower() == 'kcal': G = G * _J2cal
         sys.stdout.write("# Writing output file\n\n")
@@ -1516,7 +1526,7 @@ def main():
         ## read input
         a_fc, a_rc0, a_mean, a_covar, a_N, limits = read_dynamo_2D_igrid(directory, name1, name2, equilibration, minsteps, verbose)
         ## umbrella integration
-        grid, dG, G = umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar, a_N, limits, temp=temperature)
+        grid, dG, G = umbrella_integration_2D_igrid(grid_d, a_fc, a_rc0, a_mean, a_covar, a_N, limits, temp=temperature, fortranization=fortranization)
         ## write output
         if units.lower() == 'kcal': G = G * _J2cal
         sys.stdout.write("# Writing output file\n\n")
