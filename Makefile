@@ -1,7 +1,8 @@
 ## UmbrellaIntegrator Makefile
 
 # compiler and flags
-F2PY = python3 -m numpy.f2py --fcompiler="gnu95" --opt="-O3" --f90flags="-fopenmp" -lgomp
+FC = gfortran
+F2PY = python3 -m numpy.f2py --opt="-O3" --f90flags="-fopenmp" -lgomp
 
 all:
 	$(MAKE) clean

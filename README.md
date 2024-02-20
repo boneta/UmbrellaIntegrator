@@ -1,6 +1,6 @@
 # Umbrella Integrator
 
-![python](https://img.shields.io/badge/python-3.8-red.svg)
+![python](https://img.shields.io/badge/python-3.8+-red.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
@@ -17,17 +17,20 @@
   pip install git+https://github.com/boneta/UmbrellaIntegrator.git
 ```
 ### Requirements
-*Python 3.8+*
+*Python 3.8 - 3.11*  
+*Python 3.12+* is not supported for direct installation due to the deprecation of the `distutils` module of `numpy`, but it works fine if installed manually.
 
 A Fortran compiler (tested with *gfortran*)
 
 Packages:
   - NumPy
   - SciPy (only needed for 2D)
+  - Meson (only needed for Python 3.12+)
 
 ### Manual Installation
 It can also be installed by cloning/downloading the source code from the GitHub repository.  
-Then, to take advantage of extremely fast functions written in Fortran, a f2py module must be compiled.
+Then, to take advantage of extremely fast functions written in Fortran, a f2py module must be compiled.  
+After that, ensure that the UmbrellaIntegrator directory can be found in the `PYTHONPATH`.
 ```
   git clone https://github.com/boneta/UmbrellaIntegrator.git
   make -C UmbrellaIntegrator
