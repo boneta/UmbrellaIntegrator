@@ -60,7 +60,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
   real(8)              :: rc, normal, derivate(n)
   real(8), parameter   :: TAU_SQRT=SQRT(8.D0*DATAN(1.D0))
 
-  ! calculate gradient field of free energy over array grid [Kästner 2005 - Eq.7]
+  ! calculate gradient field of free energy over array grid [Kastner 2005 - Eq.7]
   !$OMP parallel do shared(dA_bins) private(ib, i, rc, normal, derivate)
   do ib=1,n_bins
     rc = bins(ib)
@@ -77,7 +77,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
 
   contains
 
-    ! normal probability [Kästner 2005 - Eq.5] ------------------------
+    ! normal probability [Kastner 2005 - Eq.5] ------------------------
     function probability(rc, i)
 
       implicit none
@@ -94,7 +94,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
 
     end function
 
-    ! local derivative of free energy [Kästner 2005 - Eq.6] ------------
+    ! local derivative of free energy [Kastner 2005 - Eq.6] ------------
     function dA(rc, i)
 
       implicit none
@@ -108,7 +108,7 @@ subroutine ui_derivate_1d(bins, a_fc, a_rc0, a_mean, a_std, a_N, beta, n, n_bins
 
     end function
 
-    ! normalization total [Kästner 2005 - Eq.8] ----------------------
+    ! normalization total [Kastner 2005 - Eq.8] ----------------------
     function normal_tot(rc)
 
       implicit none
@@ -155,7 +155,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
   real(8)              :: rc(2), normal, derivate(nj,ni,2)
   real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
-  ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  ! calculate gradient field of free energy over array grid [Kastner 2009 - Eq.11]
   !$OMP parallel do shared(dA_grid) private(ig, jg, rc, normal, derivate, i, j)
   do ig=1,n_ig
     do jg=1,n_jg
@@ -181,7 +181,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
 
   contains
 
-    ! normal probability [Kästner 2009 - Eq.9] ------------------------
+    ! normal probability [Kastner 2009 - Eq.9] ------------------------
     function probability(rc, j, i)
 
       implicit none
@@ -199,7 +199,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
 
     end function
 
-    ! local derivative of free energy [Kästner 2009 - Eq.10] ------------
+    ! local derivative of free energy [Kastner 2009 - Eq.10] ------------
     function dA(rc, j, i)
 
       implicit none
@@ -214,7 +214,7 @@ subroutine ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m
 
     end function
 
-    ! normalization total [Kästner 2009 - Eq.11] ----------------------
+    ! normalization total [Kastner 2009 - Eq.11] ----------------------
     function normal_tot(rc)
 
       implicit none
@@ -265,7 +265,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
   real(8), parameter   :: thr=1.D-9           ! consider impossible if lower
   real(8), parameter   :: TAU=8.D0*DATAN(1.D0)
 
-  ! calculate gradient field of free energy over array grid [Kästner 2009 - Eq.11]
+  ! calculate gradient field of free energy over array grid [Kastner 2009 - Eq.11]
   !$OMP parallel do shared(dA_grid) private(ig, rc, normal, derivate, i)
   do ig=1,n_ig
     rc = grid(ig,:)
@@ -289,7 +289,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
 
   contains
 
-    ! normal probability [Kästner 2009 - Eq.9] ------------------------
+    ! normal probability [Kastner 2009 - Eq.9] ------------------------
     function probability(rc, i)
 
       implicit none
@@ -307,7 +307,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
 
     end function
 
-    ! local derivative of free energy [Kästner 2009 - Eq.10] ------------
+    ! local derivative of free energy [Kastner 2009 - Eq.10] ------------
     function dA(rc, i)
 
       implicit none
@@ -322,7 +322,7 @@ subroutine ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a
 
     end function
 
-    ! normalization total [Kästner 2009 - Eq.11] ----------------------
+    ! normalization total [Kastner 2009 - Eq.11] ----------------------
     function normal_tot(rc)
 
       implicit none
