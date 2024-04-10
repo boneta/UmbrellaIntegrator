@@ -13,7 +13,7 @@
 ```
 
 ## Installation
-```
+```bash
   pip install git+https://github.com/boneta/UmbrellaIntegrator.git
 ```
 ### Requirements
@@ -31,8 +31,9 @@ Packages:
 It can also be installed by cloning/downloading the source code from the GitHub repository.  
 Then, to take advantage of extremely fast functions written in Fortran, a f2py module must be compiled.  
 After that, ensure that the UmbrellaIntegrator directory can be found in the `PYTHONPATH`.
-```
+```bash
   git clone https://github.com/boneta/UmbrellaIntegrator.git
+  pip install -r UmbrellaIntegrator/requirements.txt
   make -C UmbrellaIntegrator
 ```
 

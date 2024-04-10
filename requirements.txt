@@ -1,2 +1,4 @@
 numpy
 scipy
+
+meson   # Python 3.12+
