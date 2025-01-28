@@ -2,7 +2,7 @@ import os
 import sys
 
 # check python version
-if not (3,8) <= sys.version_info <= (3, 11):
+if not (3,8) <= sys.version_info < (3, 12):
     raise ValueError("This package installation is only compatible with Python 3.8 - 3.11. Try building it manually.")
 
 # check if numpy is installed
@@ -26,7 +26,7 @@ setup(
     author="Sergio Boneta",
     author_email="boneta@unizar.es",
     license="GPLv3",
-    python_requires=">=3.8, <=3.11",
+    python_requires=">=3.8, <3.12",
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python :: 3",
