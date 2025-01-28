@@ -22,18 +22,18 @@ Functions
 ---------
 
     read_dynamo_1D
-    read_dynamo_2D
+    read_dynamo_2D_rgrid
     read_dynamo_2D_igrid
     umbrella_integration_1D
-    umbrella_integration_2D
+    umbrella_integration_2D_rgrid
     umbrella_integration_2D_igrid
     igrid_gen
     igrid_topol
     igrid_grad
-    integration_2D
+    integration_2D_rgrid
     integration_2D_igrid
     write_1D
-    write_2D
+    write_2D_rgrid
     write_2D_igrid
 
 '''
@@ -129,7 +129,6 @@ kB = _R * 0.001                   # kJ * K-1 * mol-1
 ##  FUNCTIONS                                                        ##
 #######################################################################
 
-##  Read 1D Data  #####################################################
 def read_dynamo_1D(
         directory: str,
         name: str = 'dat_1',
@@ -243,8 +242,7 @@ def read_dynamo_1D(
     # return results
     return n_i, a_fc, a_rc0, a_mean, a_std, a_N, limits
 
-##  Read 2D Data  #####################################################
-def read_dynamo_2D(
+def read_dynamo_2D_rgrid(
         directory: str,
         name1: str = 'dat_1',
         name2: str = 'dat_2',
@@ -252,7 +250,7 @@ def read_dynamo_2D(
         printread: bool = True
         ) -> tuple:
     '''
-        Read 2D data from fDynamo files into matrices
+        Read 2D data from fDynamo files into matrices from a regular/rectangular grid
 
         Parameters
         ----------
@@ -358,7 +356,6 @@ def read_dynamo_2D(
     # return results
     return n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits
 
-##  Read 2D Data - Incomplete Grid  ###################################
 def read_dynamo_2D_igrid(
         directory: str,
         name1: str = 'dat_1',
@@ -368,7 +365,7 @@ def read_dynamo_2D_igrid(
         printread: bool = True
         ) -> tuple:
     '''
-        Read 2D data from fDynamo files into arrays
+        Read 2D data from fDynamo files into arrays from an irregular/incomplete grid
 
         Parameters
         ----------
@@ -485,7 +482,6 @@ def read_dynamo_2D_igrid(
     # return results
     return a_fc, a_rc0, a_mean, a_covar, a_N, limits
 
-##  Umbrella Integration 1D  ##########################################
 def umbrella_integration_1D(
         n_bins: int,
         n_i: int,
@@ -596,8 +592,7 @@ def umbrella_integration_1D(
     # return results
     return bins, dA_bins, A_bins
 
-##  Umbrella Integration 2D  ##########################################
-def umbrella_integration_2D(
+def umbrella_integration_2D_rgrid(
         grid_f: float,
         n_i: int,
         n_j: int,
@@ -613,7 +608,7 @@ def umbrella_integration_2D(
         fortranization: bool = True
         ) -> tuple:
     '''
-        Umbrella Integration algorithm for 2D from matrices
+        Umbrella Integration algorithm for 2D from matrices to a regular/rectangular grid
 
         Parameters
         ----------
@@ -683,10 +678,10 @@ def umbrella_integration_2D(
     ## Derivatives ----------------------------------------------------
 
     if fortranization:
-        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig:d} x {n_jg:d} - Fortranized\n")
+        sys.stdout.write(f"# Calculating derivatives - Regular Grid {n_ig:d} x {n_jg:d} - Fortranized\n")
         dA_grid = umbrellaint_fortran.ui_derivate_2d_rgrid(grid, m_fc, m_rc0, m_mean, m_prec, m_det_sqrt, m_N, beta)
     else:
-        sys.stdout.write(f"# Calculating derivatives - Grid {n_ig} x {n_jg}\n")
+        sys.stdout.write(f"# Calculating derivatives - Regular Grid {n_ig} x {n_jg}\n")
         # normal probability [Kästner 2009 - Eq.9]
         def probability(rc, j, i):
             diff = rc - m_mean[j,i]
@@ -714,7 +709,7 @@ def umbrella_integration_2D(
 
     ## Integration ----------------------------------------------------
     if integrate:
-        A_grid = integration_2D(grid, dA_grid, integrator)
+        A_grid = integration_2D_rgrid(grid, dA_grid, integrator)
     else:
         sys.stdout.write("# Integrating             - Skipping \n\n")
         A_grid = np.zeros((n_jg,n_ig))
@@ -722,7 +717,6 @@ def umbrella_integration_2D(
     # return results
     return grid, dA_grid, A_grid
 
-##  Incomplete Grid Generator 2D  #####################################
 def igrid_gen(
         grid_d: float,
         a_coord: ndarray,
@@ -730,7 +724,7 @@ def igrid_gen(
         fortranization: bool = True
         ) -> ndarray:
     '''
-        Incomplete grid generator in 2D
+        Irregular/incomplete grid generator in 2D
 
         Parameters
         ----------
@@ -745,7 +739,7 @@ def igrid_gen(
             if are close to a data point (def: 1e-1)
         fortranization : bool, optional
             use faster functions writen in Fortran (def: True)
-            
+
         Returns
         -------
         grid : ndarray(n_ig,2)
@@ -781,13 +775,12 @@ def igrid_gen(
     # return final grid
     return grid
 
-##  Incomplete Grid Topology 2D  ######################################
 def igrid_topol(
         grid_d: float,
         grid: ndarray
         ) -> tuple:
     '''
-        Incomplete grid topology guessing
+        Irregular/incomplete grid topology guessing
 
         Parameters
         ----------
@@ -847,14 +840,13 @@ def igrid_topol(
     # return results
     return grid_topol, grid_topol_d
 
-##  Incomplete Grid Gradient 2D  ######################################
 def igrid_grad(
         A_grid: ndarray,
         grid_topol: ndarray,
         grid_topol_d: ndarray
         ) -> ndarray:
     '''
-        Incomplete grid topology gradient calculation
+        Irregular/incomplete grid topology gradient calculation
 
         Parameters
         ----------
@@ -884,7 +876,6 @@ def igrid_grad(
     # return gradient
     return dgrid
 
-##  Umbrella Integration 2D - Incomplete Grid #########################
 def umbrella_integration_2D_igrid(
         grid_d: float,
         a_fc: ndarray,
@@ -899,7 +890,7 @@ def umbrella_integration_2D_igrid(
         fortranization: bool = True
         ) -> tuple:
     '''
-        Umbrella Integration algorithm for 2D from arrays to a incomplete grid
+        Umbrella Integration algorithm for 2D from arrays to a irregular/incomplete grid
 
         Parameters
         ----------
@@ -955,10 +946,10 @@ def umbrella_integration_2D_igrid(
     ## Derivatives ------------------------------------------------------
 
     if fortranization:
-        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d}) - Fortranized\n")
+        sys.stdout.write(f"# Calculating derivatives - Irregular/Incomplete Grid ({n_ig:d}) - Fortranized\n")
         dA_grid = umbrellaint_fortran.ui_derivate_2d_igrid(grid, a_fc, a_rc0, a_mean, a_prec, a_det_sqrt, a_N, beta, impossible)
     else:
-        sys.stdout.write(f"# Calculating derivatives - Incomplete Grid ({n_ig:d})\n")
+        sys.stdout.write(f"# Calculating derivatives - Irregular/Incomplete Grid ({n_ig:d})\n")
         # normal probability [Kästner 2009 - Eq.9]
         def probability(rc, i):
             diff = rc - a_mean[i]
@@ -1000,14 +991,13 @@ def umbrella_integration_2D_igrid(
     # return results
     return grid, dA_grid, A_grid
 
-##  Integrate 2D surface  #############################################
-def integration_2D(
+def integration_2D_rgrid(
         grid: ndarray,
         dA_grid: ndarray,
         integrator: str = 'simpson+mini'
         ) -> ndarray:
     '''
-        Integration of a 2D surface from its gradient
+        Integration of a 2D regular/rectangular surface from its gradient
 
         Parameters
         ----------
@@ -1059,7 +1049,7 @@ def integration_2D(
                     A_grid[j, i] = A_grid[j, i-1] \
                                    + (dA_grid[j, i-1, 0] + dA_grid[j, i, 0]) * dx / 2 \
                                    + (dA_grid[j-1, i, 1] + dA_grid[j, i, 1]) * dy / 2
-    
+
     ## Simpson's rule integration
     elif 'simpson' in integrator:
         sys.stdout.write("# Integrating             - Simpson's rule ")
@@ -1188,14 +1178,13 @@ def integration_2D(
     # return integrated surface
     return A_grid
 
-##  Integrate 2D surface - Incomplete Grid ############################
 def integration_2D_igrid(
         grid_d: float,
         grid: ndarray,
         dA_grid: ndarray
         ) -> ndarray:
     '''
-        Integration of a incomplete 2D surface from its gradient
+        Integration of a irregular/incomplete 2D surface from its gradient
 
         Parameters
         ----------
@@ -1252,7 +1241,6 @@ def integration_2D_igrid(
     # return integrated surface
     return A_grid
 
-##  Write 1D Results  #################################################
 def write_1D(
         file: str,
         bins: ndarray,
@@ -1296,8 +1284,7 @@ def write_1D(
         for rc, A in zip(bins, A_bins):
             f.write("{:16.9f}  {:16.9f}\n".format(rc, A))
 
-##  Write 2D Results  #################################################
-def write_2D(
+def write_2D_rgrid(
         file: str,
         grid: ndarray,
         A_grid: ndarray,
@@ -1307,7 +1294,7 @@ def write_2D(
         units: str = 'UNKNOWN'
         ) -> None:
     '''
-        Write 2D result into file
+        Write 2D result into file from a regular/rectangular grid
 
         Parameters
         ----------
@@ -1343,7 +1330,6 @@ def write_2D(
                 f.write("{:16.9f}  {:16.9f}  {:16.9f}\n".format(grid[j,i,0], grid[j,i,1], A_grid[j,i]))
             f.write("\n")
 
-##  Write 2D Results - Incomplete Grid  ###############################
 def write_2D_igrid(
         file: str,
         grid: ndarray,
@@ -1354,7 +1340,7 @@ def write_2D_igrid(
         units: str = 'UNKNOWN'
         ) -> None:
     '''
-        Write 2D result into file from a incomplete grid
+        Write 2D result into file from a irregular/incomplete grid
 
         Parameters
         ----------
@@ -1428,12 +1414,12 @@ def main():
                         help='minimum number of steps to take a file (def: 0)',
                         default=0)
     parser.add_argument('-i', '--int', metavar='INT', type=str,
-                        choices=['trapz','simpson','trapz+mini', 'simpson+mini'],
+                        choices=['trapz','simpson','trapz+mini', 'simpson+mini', 'mini'],
                         help='integration method for the derivatives\n'+
                              ' 1D\n'+
                              "  'trapz'        - composite trapezoidal rule\n"+
                              "  'simpson'      - Simpson's rule (def)\n"+
-                             ' 2D (rectangular grid)\n'+
+                             ' 2D (regular/rectangular grid)\n'+
                              "  'trapz'        - composite trapezoidal rule\n"+
                              "  'simpson'      - Simpson's rule\n"+
                              "  'trapz+mini'   - trapezoidal integration as initial guess \n"+
@@ -1441,28 +1427,28 @@ def main():
                              "  'simpson+mini' - Simpson's rule as initial guess \n"+
                              "                   for real space grid minimization (def)\n"+
                              "  'fourier'      - expansion in a Fourier series (not implemented)\n"+
-                             ' 2D (incomplete grid)\n'+
+                             ' 2D (irregular/incomplete grid)\n'+
                              "  'mini'         - real space grid minimization (def)\n")
     parser.add_argument('-b', '--bins', type=int,
-                        help='number of bins in 1D (def: 2000)',
+                        help='number of bins to re-sample in 1D (def: 2000)',
                         default=2000)
     parser.add_argument('--dist', metavar='D', type=float,
-                        help='distance between grid points for incomplete\n'+
-                             'grid based method in 2D (def: 0.05)\n',
+                        help='distance between re-sampled points for irregular/incomplete\n'+
+                             'grids in 2D (def: 0.05)\n',
                         default=0.05)
-    parser.add_argument('--rectangular', action='store_true',
-                        help='force the use of a rectangular grid instead\n'+
-                             'of an incomplete grid method in 2D\n'),
-    parser.add_argument('--grid', type=float,
-                        help='multiplicative factor for rectangular grid building\n'+
-                             'based on the number of windows in 2D (def: 1.5)',
+    parser.add_argument('--gridf', type=float,
+                        help='multiplier factor to apply the number of windows for\n'+
+                             're-sampling regular/rectangular grids in 2D (def: 1.5)',
                         default=1.5)
+    parser.add_argument('--regular', action='store_true',
+                        help='force the use of a regular/rectangular grid instead\n'+
+                             'of an irregular/incomplete grid method in 2D\n'),
     parser.add_argument('--names', type=str, nargs=2, metavar=('dat_1','dat_2'),
                         help='basename of the input files for x and y\n'+
                              'coordinates (def: dat_1 dat_2)\n',
                         default=['dat_1', 'dat_2'])
     parser.add_argument('--verbose', action='store_true',
-                        help='print additional information (i.e. reading files)\n')
+                        help='print additional information (e.g. file reading progress)\n')
     parser.add_argument('--nofortran', action='store_false', help=argparse.SUPPRESS)
 
     # assignation of input variables
@@ -1475,22 +1461,26 @@ def main():
     minsteps     = args.minsteps
     n_bins       = args.bins
     grid_d       = args.dist
-    rectangular  = args.rectangular
-    grid_f       = args.grid
+    regular      = args.regular
+    grid_f       = args.gridf
     name1, name2 = args.names
     verbose      = args.verbose
     fortranization = args.nofortran if umbrellaint_fortran else False
-    if args.int is None:
-        integrator = 'trapz+mini' if dimension == 2 else 'trapz'
-    else:
+    if args.int is not None:
         integrator = args.int
-
+    elif dimension == 1:
+        integrator = 'simpson'
+    elif dimension == 2 and regular:
+        integrator = 'simpson+mini'
+    else:
+        integrator = 'mini'
 
     ##  GENERAL INFO  #################################################
-    sys.stdout.write("## UMBRELLA INTEGRATION ##\n")
+    sys.stdout.write(f"## UMBRELLA INTEGRATOR v{__version__} ##\n")
     sys.stdout.write(f"# Name: {outfile}\n")
     sys.stdout.write(f"# Path: {directory}\n")
     sys.stdout.write(f"# Temperature (K): {temperature:.2f}\n")
+    sys.stdout.write(f"# Units: {units}/mol\n")
     sys.stdout.write(f"# Dimension: {dimension}\n\n")
 
     ##  1D  ###########################################################
@@ -1505,18 +1495,18 @@ def main():
         write_1D(outfile, bins, G, temp=temperature, integrator=integrator, samples=np.mean(a_N), units=units)
 
     ##  2D - Rectangular Grid #########################################
-    elif dimension == 2 and rectangular:
+    elif dimension == 2 and regular:
         ## check scipy
         if not scipy_optimize:
             raise ImportError("SciPy could not be imported")
         ## read input
-        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D(directory, name1, name2, equilibration, verbose)
+        n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits = read_dynamo_2D_rgrid(directory, name1, name2, equilibration, verbose)
         ## umbrella integration
-        grid, dG, G = umbrella_integration_2D(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator, fortranization=fortranization)
+        grid, dG, G = umbrella_integration_2D_rgrid(grid_f, n_i, n_j, m_fc, m_rc0, m_mean, m_covar, m_N, limits, temp=temperature, integrator=integrator, fortranization=fortranization)
         ## write output
         if units.lower() == 'kcal': G = G * _J2cal
         sys.stdout.write("# Writing output file\n\n")
-        write_2D(outfile, grid, G, temp=temperature, integrator=integrator, samples=np.mean(m_N), units=units)
+        write_2D_rgrid(outfile, grid, G, temp=temperature, integrator=integrator, samples=np.mean(m_N), units=units)
 
     ##  2D - Incomplete Grid ##########################################
     elif dimension == 2:
