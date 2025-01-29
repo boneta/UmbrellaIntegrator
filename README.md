@@ -25,7 +25,7 @@ A Fortran compiler (tested with *gfortran*)
 Packages:
   - NumPy
   - SciPy (only needed for 2D)
-  - Meson (only needed for Python 3.12+)
+  - Meson and Ninja (only needed for Python 3.12+)
 
 ### Manual Installation
 It can also be installed by cloning/downloading the source code from the GitHub repository.  
@@ -58,9 +58,9 @@ The coordinate is split into equally spaced bins, local derivatives are calculat
 #### 2 Dimensions
 Two working modes available:
 
- - *Incomplete grid* : Default mode. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into an equally spaced grid with '--dist' distance between points. The surface is only generated in areas containing input values. Recommended method if not restricted to a perfect rectangular result.
+ - *Irregular/Incomplete Grid* : Default mode. Surfaces of any shape, irregularly filled and/or missing points are welcomed. Local derivatives are calculated into an equally spaced grid with '--dist' distance between points. The surface is only generated in areas containing input values. Recommended method if not restricted to a perfect rectangular result.
  
- - *Rectangular grid* : Activated with '--rectangular'. The PMF points are placed in a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--grid' parameter and based on the initial files. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
+ - *Regular/Rectangular Grid* : Activated with '--regular'. The PMF points are placed in a matrix according to their file name. The output is a grid with the same limits and a density controlled by '--gridf' parameter and based on the initial files. Example: 60x30 with grid=1.2 -> 72x36. Missing input files will lead to errors.
 
 #### Examples
 Download the example files from [here](https://github.com/boneta/UmbrellaIntegrator/releases/latest)  
@@ -69,7 +69,7 @@ Download the example files from [here](https://github.com/boneta/UmbrellaIntegra
 
 `umbrellaint --dim 2 --out pmf_2d.dat`  
 `umbrellaint --dim 2 --temp 328. --dist 0.04`
-`umbrellaint --dim 2 --out pmf_2d.dat --path ../examples/2D/ --temp 313 --rectangular --grid 1.5`  
+`umbrellaint --dim 2 --out pmf_2d.dat --path ../examples/2D/ --temp 313 --regular --gridf 1.5`  
 
 
 ## How to cite
