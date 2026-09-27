@@ -1075,7 +1075,7 @@ def integration_2D_rgrid(
         sys.stdout.write("+ Real Space Grid Mini ")
         sys.stdout.flush()
         # L-BFGS-B minimization of sumation of square of gradient differences
-        mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+        mini_result = scipy_optimize.minimize(D_tot, A_grid.ravel(), method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50})
         if not mini_result.success:
             sys.stdout.write("\nWARNING: Minimization could not converge")
         A_grid = mini_result.x.reshape(n_jg,n_ig)
@@ -1227,7 +1227,7 @@ def integration_2D_igrid(
     sys.stdout.write("# Integrating             - Real Space Grid Mini ")
     sys.stdout.flush()
     # L-BFGS-B minimization of sumation of square of gradient differences
-    mini_result = scipy_optimize.minimize(D_tot, A_grid, method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50, 'iprint':-1})
+    mini_result = scipy_optimize.minimize(D_tot, A_grid, method='L-BFGS-B', options={'maxfun':np.inf, 'maxiter':np.inf, 'maxls':50})
     if not mini_result.success:
         sys.stdout.write("\nWARNING: Minimization could not converge")
     A_grid = mini_result.x
