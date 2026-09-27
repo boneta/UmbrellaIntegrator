@@ -1,0 +1,25 @@
+[build-system]
+requires = ["meson-python", "numpy"]
+build-backend = "mesonpy"
+
+[project]
+name = "UmbrellaIntegrator"
+version = "0.6.1"
+description = "Umbrella Integration of PMF calculations - 1D & 2D"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "GPLv3"}
+authors = [{name = "Sergio Boneta", email = "boneta@unizar.es"}]
+dependencies = ["numpy", "scipy"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Homepage = "https://github.com/boneta/UmbrellaIntegrator"
+
+[project.scripts]
+umbrellaint = "umbrellaint:main"

@@ -1,6 +1,6 @@
 # Umbrella Integrator
 
-![python](https://img.shields.io/badge/python-3.8+-red.svg)
+![python](https://img.shields.io/badge/python-3.9+-red.svg)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
@@ -16,26 +16,30 @@
 ```bash
   pip install git+https://github.com/boneta/UmbrellaIntegrator.git
 ```
-### Requirements
-*Python 3.8 - 3.11*  
-*Python 3.12+* is not supported for direct installation due to the deprecation of the `distutils` module of `numpy`, but it works fine if installed manually.
 
-A Fortran compiler (tested with *gfortran*)
+### Requirements
+*Python 3.9+*
+
+A Fortran compiler (tested with *gfortran*).
+
+- **Linux**: usually available already, or install via your package manager (e.g. `apt install gfortran`).
+- **macOS**: Apple's default Xcode compilers do not include a Fortran compiler or OpenMP support. Install both via Homebrew: `brew install gcc libomp`
+- **Windows**: not officially tested; a working `gfortran` (e.g. via MSYS2) is required.
 
 Packages:
-  - NumPy
-  - SciPy (only needed for 2D)
-  - Meson and Ninja (only needed for Python 3.12+)
+- NumPy
+- SciPy (only needed for 2D)
+- Meson and Ninja (build-time only)
 
 ### Manual Installation
-It can also be installed by cloning/downloading the source code from the GitHub repository.  
-Then, to take advantage of extremely fast functions written in Fortran, a f2py module must be compiled.  
-After that, ensure that the UmbrellaIntegrator directory can be found in the `PYTHONPATH`.
+It can also be used directly from source, without installing it as a package. Clone/download the repository, compile the Fortran extension in-place with the provided `Makefile`, and add the directory to your `PYTHONPATH`:
 ```bash
   git clone https://github.com/boneta/UmbrellaIntegrator.git
   pip install -r UmbrellaIntegrator/requirements.txt
   make -C UmbrellaIntegrator
+  export PYTHONPATH="$PYTHONPATH:$(pwd)/UmbrellaIntegrator"
 ```
+The `Makefile` compiles `umbrellaint_fortran.f90` directly with `f2py`, producing a `.so` file in the same directory. The same Fortran compiler and, on macOS, OpenMP requirements from above still apply. Re-run `make` after pulling any changes to the Fortran source; `make clean` removes the compiled module.
 
 ## Input format
 
